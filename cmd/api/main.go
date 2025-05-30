@@ -28,18 +28,16 @@ func main() {
 	defer db.Close()
 
 	// Initialize repositories
-	userRepo := infrastructure.NewUserRepository(db)
 	corporationRepo := infrastructure.NewCorporationRepository(db)
 
 	// Initialize gBiz client (for batch operations)
 	gbizClient := infrastructure.NewGBizClient()
 
 	// Initialize use cases
-	userUsecase := usecase.NewUserUsecase(userRepo)
 	corporationUsecase := usecase.NewCorporationUsecase(corporationRepo, gbizClient)
 
 	// Initialize router with handlers
-	router := presentation.NewRouter(userUsecase, corporationUsecase)
+	router := presentation.NewRouter(corporationUsecase)
 	r := router.SetupRoutes()
 
 	// Server
@@ -48,7 +46,6 @@ func main() {
 
 	log.Printf("Server starting on port %s", port)
 	log.Printf("Health check available at http://localhost:%s/health", port)
-	log.Printf("Users API available at http://localhost:%s/users", port)
 	log.Printf("Corporations API available at http://localhost:%s/corporations", port)
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("Server failed to start: %v", err)

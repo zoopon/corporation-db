@@ -13,14 +13,12 @@ import (
 
 // Router holds the HTTP router and handlers
 type Router struct {
-	userHandler        *UserHandler
 	corporationHandler *CorporationHandler
 }
 
 // NewRouter creates a new Router
-func NewRouter(userUsecase *usecase.UserUsecase, corporationUsecase *usecase.CorporationUsecase) *Router {
+func NewRouter(corporationUsecase *usecase.CorporationUsecase) *Router {
 	return &Router{
-		userHandler:        NewUserHandler(userUsecase),
 		corporationHandler: NewCorporationHandler(corporationUsecase),
 	}
 }
@@ -40,7 +38,6 @@ func (router *Router) SetupRoutes() *chi.Mux {
 	serverWrapper := &api.ServerInterfaceWrapper{
 		Handler: &CombinedHandler{
 			corporationHandler: router.corporationHandler,
-			userHandler:        router.userHandler,
 		},
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -51,9 +48,6 @@ func (router *Router) SetupRoutes() *chi.Mux {
 	r.Get("/corporations", serverWrapper.GetCorporations)
 	r.Get("/corporations/{corporate_number}", serverWrapper.GetCorporationsCorporateNumber)
 	r.Get("/health", serverWrapper.HealthCheck)
-	r.Get("/users", serverWrapper.GetUsers)
-	r.Post("/users", serverWrapper.CreateUser)
-	r.Get("/users/{id}", serverWrapper.GetUserById)
 
 	return r
 }
@@ -61,7 +55,6 @@ func (router *Router) SetupRoutes() *chi.Mux {
 // CombinedHandler implements the ServerInterface for all endpoints
 type CombinedHandler struct {
 	corporationHandler *CorporationHandler
-	userHandler        *UserHandler
 }
 
 // Corporation endpoints
@@ -80,17 +73,4 @@ func (ch *CombinedHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
-}
-
-// User endpoints (delegated to existing handler)
-func (ch *CombinedHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
-	ch.userHandler.GetUsers(w, r)
-}
-
-func (ch *CombinedHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	ch.userHandler.CreateUser(w, r)
-}
-
-func (ch *CombinedHandler) GetUserById(w http.ResponseWriter, r *http.Request, id int64) {
-	ch.userHandler.GetUserByID(w, r)
 }

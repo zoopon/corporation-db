@@ -10,10 +10,6 @@ servers:
 paths:
   /health:
     $ref: './paths/health.yaml'
-  /users:
-    $ref: './paths/users.yaml'
-  /users/{id}:
-    $ref: './paths/users_id.yaml'
   /corporations:
     $ref: './paths/corporations.yaml'
   /corporations/{corporate_number}:
@@ -21,9 +17,5 @@ paths:
 
 components:
   schemas:
-    User:
-      $ref: './components/schemas/User.yaml'
-    CreateUserRequest:
-      $ref: './components/schemas/CreateUserRequest.yaml'
     Corporation:
       $ref: './components/schemas/Corporation.yaml'

@@ -33,13 +33,3 @@ type Corporation struct {
 	CreatedAt           sql.NullTime   `json:"created_at"`
 	UpdatedAt           sql.NullTime   `json:"updated_at"`
 }
-
-type User struct {
-	ID        int32          `json:"id"`
-	Name      string         `json:"name"`
-	Email     string         `json:"email"`
-	Phone     sql.NullString `json:"phone"`
-	Address   sql.NullString `json:"address"`
-	CreatedAt sql.NullTime   `json:"created_at"`
-	UpdatedAt sql.NullTime   `json:"updated_at"`
-}

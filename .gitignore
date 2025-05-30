@@ -64,6 +64,3 @@ tmp/
 *.temp
 tmp/
 temp/
-
-# OpenAPI bundled files
-api/openapi-bundled.yaml

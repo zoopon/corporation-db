@@ -44,5 +44,14 @@ services:
     profiles:
       - migration
 
+  # Redocly CLI service for OpenAPI management
+  redocly:
+    image: redocly/cli:latest
+    working_dir: /app
+    volumes:
+      - .:/app
+    profiles:
+      - docs
+
 volumes:
   postgres_data:

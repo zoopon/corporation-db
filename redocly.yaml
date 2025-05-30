@@ -1,0 +1,27 @@
+apis:
+  main:
+    root: api/openapi.yaml
+    
+lint:
+  extends:
+    - recommended
+  rules:
+    no-unresolved-refs: error
+    no-unused-components: warn
+    operation-operationId-unique: error
+    operation-summary: error
+    operation-description: warn
+    path-declaration-must-exist: error
+    path-not-include-query: error
+    path-parameters-defined: error
+
+bundle:
+  remove-unused-components: true
+  
+theme:
+  openapi:
+    generateCodeSamples:
+      languages:
+        - lang: curl
+        - lang: go
+        - lang: javascript

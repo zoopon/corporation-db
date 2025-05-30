@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run generate-api schema-export schema-check
+.PHONY: help build run test clean docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check
 
 # デフォルトターゲット
 help:
@@ -11,6 +11,11 @@ help:
 	@echo "  docker-down    - Stop Docker containers"
 	@echo "  sqlc-generate  - Generate code from SQL"
 	@echo "  generate-api   - Generate API code from OpenAPI spec"
+	@echo ""
+	@echo "OpenAPI/Redocly commands:"
+	@echo "  openapi-lint   - Lint OpenAPI specification"
+	@echo "  openapi-bundle - Bundle split OpenAPI files into single file"
+	@echo "  openapi-preview - Preview API documentation"
 	@echo ""
 	@echo "sqldef commands:"
 	@echo "  schema-apply   - Apply schema changes to database"
@@ -53,7 +58,30 @@ sqlc-generate:
 
 # oapi-codegenでAPIコードを生成
 generate-api:
-	oapi-codegen --config oapi-codegen.yaml api/openapi.yaml
+	make openapi-bundle
+	oapi-codegen --config oapi-codegen.yaml api/openapi-bundled.yaml
+
+# Redocly: OpenAPI仕様をlint
+openapi-lint:
+	docker-compose --profile docs run --rm redocly lint api/openapi.yaml
+
+# Redocly: 分割されたOpenAPIファイルを単一ファイルにバンドル
+openapi-bundle:
+	docker-compose --profile docs run --rm redocly bundle api/openapi.yaml --output api/openapi-bundled.yaml
+
+# Redocly: API ドキュメントをプレビュー
+openapi-preview:
+	docker-compose --profile docs run --rm -p 8081:8080 redocly preview-docs api/openapi.yaml --host 0.0.0.0
+
+# Redocly: API ドキュメントをプレビュー（バックグラウンド）
+openapi-preview-bg:
+	@echo "Starting API documentation preview at http://localhost:8081"
+	docker-compose --profile docs up -d redocly
+	docker-compose --profile docs exec redocly redocly preview-docs api/openapi.yaml --host 0.0.0.0 --port 8080 &
+
+# Redocly: プレビューサーバーを停止
+openapi-preview-stop:
+	docker-compose --profile docs down
 
 # sqldef: スキーマを適用
 schema-apply:

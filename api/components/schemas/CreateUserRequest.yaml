@@ -1,0 +1,25 @@
+type: object
+required:
+  - name
+  - email
+properties:
+  name:
+    type: string
+    example: "John Doe"
+    description: Full name of the user
+    minLength: 1
+    maxLength: 255
+  email:
+    type: string
+    format: email
+    example: "john@example.com"
+    description: Email address of the user
+  phone:
+    type: string
+    example: "123-456-7890"
+    description: Phone number of the user
+    maxLength: 20
+  address:
+    type: string
+    example: "123 Main St, City, Country"
+    description: Physical address of the user

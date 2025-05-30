@@ -28,12 +28,12 @@ func main() {
 	}
 	defer db.Close()
 
-	// Create API server
-	apiServer := api.NewAPIServer()
+	// Create API server with database connection
+	apiServer := api.NewAPIServer(db)
 
 	// Setup Chi router
 	r := chi.NewRouter()
-	
+
 	// Middleware
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)

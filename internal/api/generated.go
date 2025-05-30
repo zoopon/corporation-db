@@ -20,6 +20,78 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Corporation defines model for Corporation.
+type Corporation struct {
+	// Address Address
+	Address *string `json:"address"`
+
+	// BusinessDescription Business description
+	BusinessDescription *string `json:"business_description"`
+
+	// CapitalStock Capital stock in yen
+	CapitalStock *int64 `json:"capital_stock"`
+
+	// CityCode City code
+	CityCode *string `json:"city_code"`
+
+	// CorporateNumber 13-digit corporate number
+	CorporateNumber string `json:"corporate_number"`
+
+	// CorporateType Corporation type
+	CorporateType *string `json:"corporate_type"`
+
+	// CreatedAt Created time
+	CreatedAt time.Time `json:"created_at"`
+
+	// Email Email address
+	Email *string `json:"email"`
+
+	// EmployeeNumber Number of employees
+	EmployeeNumber *int32 `json:"employee_number"`
+
+	// EnglishName Corporation name in English
+	EnglishName *string `json:"english_name"`
+
+	// FoundingDate Founding date
+	FoundingDate *openapi_types.Date `json:"founding_date"`
+
+	// Id Corporation ID
+	Id int64 `json:"id"`
+
+	// Industry Industry
+	Industry *string `json:"industry"`
+
+	// LastUpdated Last updated time from gBizINFO
+	LastUpdated *time.Time `json:"last_updated"`
+
+	// Name Corporation name
+	Name string `json:"name"`
+
+	// NameKana Corporation name in katakana
+	NameKana *string `json:"name_kana"`
+
+	// Phone Phone number
+	Phone *string `json:"phone"`
+
+	// PostalCode Postal code
+	PostalCode *string `json:"postal_code"`
+
+	// PrefectureCode Prefecture code
+	PrefectureCode *string `json:"prefecture_code"`
+
+	// Representative Representative name
+	Representative *string `json:"representative"`
+
+	// Status Corporation status
+	Status string `json:"status"`
+
+	// UpdatedAt Updated time
+	UpdatedAt time.Time `json:"updated_at"`
+
+	// Website Website URL
+	Website *string `json:"website"`
+}
+
 // CreateUserRequest defines model for CreateUserRequest.
 type CreateUserRequest struct {
 	// Address Physical address of the user
@@ -59,11 +131,35 @@ type User struct {
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
+// GetCorporationsParams defines parameters for GetCorporations.
+type GetCorporationsParams struct {
+	// Limit Maximum number of corporations to return
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Number of corporations to skip for pagination
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// CorporateNumber Filter by corporate number
+	CorporateNumber *string `form:"corporate_number,omitempty" json:"corporate_number,omitempty"`
+
+	// Name Filter by corporation name (partial match)
+	Name *string `form:"name,omitempty" json:"name,omitempty"`
+
+	// Prefecture Filter by prefecture
+	Prefecture *string `form:"prefecture,omitempty" json:"prefecture,omitempty"`
+}
+
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = CreateUserRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Get all corporations
+	// (GET /corporations)
+	GetCorporations(w http.ResponseWriter, r *http.Request, params GetCorporationsParams)
+	// Get corporation by corporate number
+	// (GET /corporations/{corporate_number})
+	GetCorporationsCorporateNumber(w http.ResponseWriter, r *http.Request, corporateNumber string)
 	// Health check
 	// (GET /health)
 	HealthCheck(w http.ResponseWriter, r *http.Request)
@@ -81,6 +177,18 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Get all corporations
+// (GET /corporations)
+func (_ Unimplemented) GetCorporations(w http.ResponseWriter, r *http.Request, params GetCorporationsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get corporation by corporate number
+// (GET /corporations/{corporate_number})
+func (_ Unimplemented) GetCorporationsCorporateNumber(w http.ResponseWriter, r *http.Request, corporateNumber string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Health check
 // (GET /health)
@@ -114,6 +222,92 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetCorporations operation middleware
+func (siw *ServerInterfaceWrapper) GetCorporations(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCorporationsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "corporate_number" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "corporate_number", r.URL.Query(), &params.CorporateNumber)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "corporate_number", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "name" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "prefecture" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "prefecture", r.URL.Query(), &params.Prefecture)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "prefecture", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCorporations(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetCorporationsCorporateNumber operation middleware
+func (siw *ServerInterfaceWrapper) GetCorporationsCorporateNumber(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "corporate_number" -------------
+	var corporateNumber string
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "corporate_number", runtime.ParamLocationPath, chi.URLParam(r, "corporate_number"), &corporateNumber)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "corporate_number", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCorporationsCorporateNumber(w, r, corporateNumber)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
 
 // HealthCheck operation middleware
 func (siw *ServerInterfaceWrapper) HealthCheck(w http.ResponseWriter, r *http.Request) {
@@ -300,6 +494,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/corporations", wrapper.GetCorporations)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/corporations/{corporate_number}", wrapper.GetCorporationsCorporateNumber)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/health", wrapper.HealthCheck)
 	})
 	r.Group(func(r chi.Router) {
@@ -318,23 +518,40 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

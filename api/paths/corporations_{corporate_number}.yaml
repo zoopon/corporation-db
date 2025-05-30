@@ -1,0 +1,47 @@
+get:
+  summary: Get corporation by corporate number
+  description: Retrieve a specific corporation by its corporate number
+  tags:
+    - Corporations
+  parameters:
+    - name: corporate_number
+      in: path
+      required: true
+      description: The corporate number (13 digits)
+      schema:
+        type: string
+        pattern: '^[0-9]{13}$'
+  responses:
+    '200':
+      description: Corporation found
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/Corporation.yaml'
+    '400':
+      description: Invalid corporate number format
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '404':
+      description: Corporation not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    '500':
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

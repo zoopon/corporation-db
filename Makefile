@@ -27,6 +27,12 @@ help:
 	@echo "Documentation:"
 	@echo "  docs-serve     - Serve API documentation locally"
 	@echo "  docs-build     - Build static documentation"
+	@echo ""
+	@echo "Batch operations:"
+	@echo "  batch-build    - Build batch command"
+	@echo "  batch-run      - Run batch import (requires database)"
+	@echo "  batch-dry-run  - Run batch import in dry-run mode"
+	@echo "  batch-docker   - Run batch import in Docker"
 
 # Docker環境でアプリケーションを起動（推奨）
 docker-run:
@@ -108,3 +114,20 @@ docs-serve:
 docs-build:
 	@echo "Building static API documentation..."
 	docker-compose --profile docs run --rm redocly build-docs api/openapi.yaml --output docs/
+
+# Batch operation commands
+batch-build:
+	@echo "Building batch command..."
+	go build -o bin/batch cmd/batch/main.go
+
+batch-run: batch-build
+	@echo "Running batch import..."
+	./bin/batch
+
+batch-dry-run: batch-build
+	@echo "Running batch import (dry-run)..."
+	./bin/batch -dry-run
+
+batch-docker:
+	@echo "Running batch import in Docker..."
+	docker-compose --profile batch up --build batch

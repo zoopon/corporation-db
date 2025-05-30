@@ -8,6 +8,32 @@ import (
 	"database/sql"
 )
 
+type Corporation struct {
+	ID                  int32          `json:"id"`
+	CorporateNumber     string         `json:"corporate_number"`
+	Name                string         `json:"name"`
+	NameKana            sql.NullString `json:"name_kana"`
+	EnglishName         sql.NullString `json:"english_name"`
+	PostalCode          sql.NullString `json:"postal_code"`
+	Address             sql.NullString `json:"address"`
+	PrefectureCode      sql.NullString `json:"prefecture_code"`
+	CityCode            sql.NullString `json:"city_code"`
+	FoundingDate        sql.NullTime   `json:"founding_date"`
+	Status              string         `json:"status"`
+	CorporateType       sql.NullString `json:"corporate_type"`
+	CapitalStock        sql.NullInt64  `json:"capital_stock"`
+	EmployeeNumber      sql.NullInt32  `json:"employee_number"`
+	Representative      sql.NullString `json:"representative"`
+	BusinessDescription sql.NullString `json:"business_description"`
+	Industry            sql.NullString `json:"industry"`
+	Website             sql.NullString `json:"website"`
+	Phone               sql.NullString `json:"phone"`
+	Email               sql.NullString `json:"email"`
+	LastUpdated         sql.NullTime   `json:"last_updated"`
+	CreatedAt           sql.NullTime   `json:"created_at"`
+	UpdatedAt           sql.NullTime   `json:"updated_at"`
+}
+
 type User struct {
 	ID        int32          `json:"id"`
 	Name      string         `json:"name"`

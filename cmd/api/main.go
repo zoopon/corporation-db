@@ -6,11 +6,10 @@ import (
 	"net/http"
 	"os"
 
-	"corporation-db/internal/api"
 	"corporation-db/internal/infrastructure"
+	"corporation-db/internal/presentation"
+	"corporation-db/internal/usecase"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 )
 
@@ -28,27 +27,29 @@ func main() {
 	}
 	defer db.Close()
 
-	// Create API server with database connection
-	apiServer := api.NewAPIServer(db)
+	// Initialize repositories
+	userRepo := infrastructure.NewUserRepository(db)
+	corporationRepo := infrastructure.NewCorporationRepository(db)
 
-	// Setup Chi router
-	r := chi.NewRouter()
+	// Initialize gBiz client (for batch operations)
+	gbizClient := infrastructure.NewGBizClient()
 
-	// Middleware
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	// Initialize use cases
+	userUsecase := usecase.NewUserUsecase(userRepo)
+	corporationUsecase := usecase.NewCorporationUsecase(corporationRepo, gbizClient)
 
-	// Mount OpenAPI generated handlers
-	api.HandlerFromMux(apiServer, r)
+	// Initialize router with handlers
+	router := presentation.NewRouter(userUsecase, corporationUsecase)
+	r := router.SetupRoutes()
 
 	// Server
 	port := getEnv("PORT", "8080")
 	addr := fmt.Sprintf(":%s", port)
 
 	log.Printf("Server starting on port %s", port)
-	log.Printf("OpenAPI documentation available at http://localhost:%s/", port)
+	log.Printf("Health check available at http://localhost:%s/health", port)
+	log.Printf("Users API available at http://localhost:%s/users", port)
+	log.Printf("Corporations API available at http://localhost:%s/corporations", port)
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}

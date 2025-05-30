@@ -14,6 +14,10 @@ paths:
     $ref: './paths/users.yaml'
   /users/{id}:
     $ref: './paths/users_id.yaml'
+  /corporations:
+    $ref: './paths/corporations.yaml'
+  /corporations/{corporate_number}:
+    $ref: './paths/corporations_{corporate_number}.yaml'
 
 components:
   schemas:
@@ -21,3 +25,5 @@ components:
       $ref: './components/schemas/User.yaml'
     CreateUserRequest:
       $ref: './components/schemas/CreateUserRequest.yaml'
+    Corporation:
+      $ref: './components/schemas/Corporation.yaml'

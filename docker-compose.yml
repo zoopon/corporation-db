@@ -46,7 +46,7 @@ services:
     profiles:
       - migration
 
-  # Redocly CLI service（OpenAPI管理用）
+  # Redocly CLI service for OpenAPI management
   redocly:
     image: redocly/cli:latest
     working_dir: /app

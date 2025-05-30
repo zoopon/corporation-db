@@ -2,6 +2,11 @@
 
 Go言語で構築されたクリーンアーキテクチャベースのWebアプリケーション（APIサーバー）です。
 
+## 📚 ドキュメント
+
+- **[AI開発ガイドライン](AI_DEVELOPMENT_GUIDELINES.md)** - AI（GitHub Copilot等）を活用した開発のベストプラクティス
+- **[クイックリファレンス](QUICK_REFERENCE.md)** - 日常開発で使用するコマンドとトラブルシューティング
+
 ## 技術スタック
 
 - **言語**: Go 1.21
@@ -33,7 +38,9 @@ Go言語で構築されたクリーンアーキテクチャベースのWebアプ
 │   │   └── schemas/       # スキーマ定義
 │   └── paths/             # エンドポイント定義
 ├── docker/               # Docker関連ファイル
-└── pkg/                  # 共有パッケージ
+├── pkg/                  # 共有パッケージ
+├── AI_DEVELOPMENT_GUIDELINES.md  # AI協働開発ガイド
+└── QUICK_REFERENCE.md     # 開発クイックリファレンス
 ```
 
 ## セットアップ

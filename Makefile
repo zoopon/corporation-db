@@ -1,4 +1,4 @@
-.PHONY: help docker-run docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check
+.PHONY: help docker-run docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all
 
 # デフォルトターゲット
 help:
@@ -6,6 +6,9 @@ help:
 	@echo "  docker-run     - Start application with Docker (recommended)"
 	@echo "  docker-up      - Start Docker containers"
 	@echo "  docker-down    - Stop Docker containers"
+	@echo "  generate-all   - Generate all code (API + SQLC)"
+	@echo ""
+	@echo "Code generation:"
 	@echo "  sqlc-generate  - Generate code from SQL"
 	@echo "  generate-api   - Generate API code from OpenAPI spec"
 	@echo ""
@@ -20,6 +23,10 @@ help:
 	@echo "  schema-dry-run - Dry run schema changes"
 	@echo "  schema-export  - Export current database schema"
 	@echo "  schema-check   - Check database connection and status"
+	@echo ""
+	@echo "Documentation:"
+	@echo "  docs-serve     - Serve API documentation locally"
+	@echo "  docs-build     - Build static documentation"
 
 # Docker環境でアプリケーションを起動（推奨）
 docker-run:
@@ -88,3 +95,16 @@ schema-export:
 # sqldef: データベース接続確認
 schema-check:
 	docker-compose exec db psql -U postgres -d corporation_db -c "SELECT current_database(), current_user;"
+
+# 全コード生成（推奨）
+generate-all: openapi-bundle generate-api sqlc-generate
+	@echo "All code generation completed"
+
+# API documentation commands
+docs-serve:
+	@echo "Starting API documentation server..."
+	docker-compose --profile docs up redocly
+
+docs-build:
+	@echo "Building static API documentation..."
+	docker-compose --profile docs run --rm redocly build-docs api/openapi.yaml --output docs/

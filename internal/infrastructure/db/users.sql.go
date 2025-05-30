@@ -24,7 +24,12 @@ type CreateUserParams struct {
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, arg.Name, arg.Email, arg.Phone, arg.Address)
+	row := q.db.QueryRowContext(ctx, createUser,
+		arg.Name,
+		arg.Email,
+		arg.Phone,
+		arg.Address,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -154,95 +159,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Email,
 		&i.Phone,
 		&i.Address,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, email, created_at, updated_at FROM users
-WHERE id = $1 LIMIT 1
-`
-
-func (q *Queries) GetUserByID(ctx context.Context, id int32) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUserByID, id)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getUsers = `-- name: GetUsers :many
-SELECT id, name, email, created_at, updated_at FROM users
-ORDER BY created_at DESC
-`
-
-func (q *Queries) GetUsers(ctx context.Context) ([]User, error) {
-	rows, err := q.db.QueryContext(ctx, getUsers)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []User
-	for rows.Next() {
-		var i User
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Email,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const updateUser = `-- name: UpdateUser :one
-UPDATE users
-SET name = $2, email = $3, updated_at = NOW()
-WHERE id = $1
-RETURNING id, name, email, created_at, updated_at
-`
-
-type UpdateUserParams struct {
-	ID    int32  `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
-
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, updateUser, arg.ID, arg.Name, arg.Email)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

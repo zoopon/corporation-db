@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-up docker-down sqlc-generate
+.PHONY: help build run test clean docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run schema-export schema-check
 
 # デフォルトターゲット
 help:
@@ -10,6 +10,13 @@ help:
 	@echo "  docker-up      - Start Docker containers"
 	@echo "  docker-down    - Stop Docker containers"
 	@echo "  sqlc-generate  - Generate code from SQL"
+	@echo ""
+	@echo "sqldef commands:"
+	@echo "  schema-apply   - Apply schema changes to database"
+	@echo "  schema-diff    - Show schema differences (dry-run)"
+	@echo "  schema-dry-run - Dry run schema changes"
+	@echo "  schema-export  - Export current database schema"
+	@echo "  schema-check   - Check database connection and status"
 
 # アプリケーションをビルド
 build:
@@ -43,6 +50,27 @@ docker-run:
 sqlc-generate:
 	sqlc generate
 
-# データベースのマイグレーション（開発用）
-db-migrate:
-	docker-compose exec db psql -U postgres -d corporation_db -f /docker-entrypoint-initdb.d/001_create_users_table.sql
+# sqldef: スキーマを適用
+schema-apply:
+	docker-compose --profile migration run --rm -T -e PGPASSWORD=password sqldef \
+		-h db -p 5432 -U postgres \
+		corporation_db < db/schema.sql
+
+# sqldef: スキーマの差分を確認（dry-run）
+schema-diff:
+	docker-compose --profile migration run --rm -T -e PGPASSWORD=password sqldef \
+		-h db -p 5432 -U postgres --dry-run \
+		corporation_db < db/schema.sql
+
+# sqldef: ドライラン（変更内容を表示のみ）
+schema-dry-run: schema-diff
+
+# sqldef: 現在のスキーマをエクスポート
+schema-export:
+	docker-compose --profile migration run --rm -T -e PGPASSWORD=password sqldef \
+		-h db -p 5432 -U postgres --export \
+		corporation_db
+
+# sqldef: データベース接続確認
+schema-check:
+	docker-compose exec db psql -U postgres -d corporation_db -c "SELECT current_database(), current_user;"

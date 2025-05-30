@@ -1,316 +1,468 @@
-# AI駆動開発ガイドライン
+# AI実装者ガイドライン
 
 ## 概要
 
-本ガイドラインは、**corporatioin-db**プロジェクトの開発を通じて得られた知見をもとに、AI（GitHub Copilot等）を活用した効率的な開発手法をまとめたものです。
+本ガイドラインは、AI（ChatGPT、Claude、GitHub Copilot等）が**corporatioin-db**プロジェクトで実装作業を行う際に従うべき原則とベストプラクティスをまとめたものです。
 
 ## 目次
 
-1. [プロジェクト構成の原則](#プロジェクト構成の原則)
-2. [技術スタック選定基準](#技術スタック選定基準)
-3. [AI協働開発のベストプラクティス](#ai協働開発のベストプラクティス)
-4. [自動化戦略](#自動化戦略)
-5. [品質保証](#品質保証)
-6. [トラブルシューティング](#トラブルシューティング)
-7. [継続的改善](#継続的改善)
+1. [実装前の必須確認事項](#実装前の必須確認事項)
+2. [プロジェクト理解の原則](#プロジェクト理解の原則)
+3. [実装アプローチ](#実装アプローチ)
+4. [コード生成・修正の原則](#コード生成修正の原則)
+5. [品質保証チェックリスト](#品質保証チェックリスト)
+6. [エラー対応プロトコル](#エラー対応プロトコル)
+7. [コミュニケーション原則](#コミュニケーション原則)
 
 ---
 
-## プロジェクト構成の原則
+## 実装前の必須確認事項
 
-### 1. Clean Architecture の採用
+### 1. プロジェクト構造の把握
 
-```
-internal/
-├── api/           # OpenAPI生成コード
-├── domain/        # ビジネスロジック・エンティティ
-├── infrastructure/ # 外部依存（DB、外部API等）
-├── presentation/  # HTTP層・ルーティング
-└── usecase/       # アプリケーション層
-```
-
-**AIとの協働メリット:**
-- 構造が明確でAIが理解しやすい
-- 各層の責任範囲が明確で的確な提案を得られる
-- テストコード生成時に依存関係を正しく認識できる
-
-### 2. 設定ファイルの集約
-
-プロジェクトルートに設定ファイルを配置し、AIが全体像を把握しやすくする:
-
-```
-project-root/
-├── docker-compose.yml    # 開発環境定義
-├── sqlc.yaml            # データベースコード生成
-├── oapi-codegen.yaml    # API生成設定
-├── redocly.yaml         # OpenAPI管理
-└── Makefile             # 開発コマンド集約
-```
-
-### 3. ドキュメント駆動開発
-
-- **README.md**: プロジェクト概要、セットアップ、使用方法
-- **API仕様**: OpenAPIでAPI-First設計
-- **スキーマ定義**: 宣言的スキーマ管理（sqldef）
-
----
-
-## 技術スタック選定基準
-
-### 1. AI協働に適したツール選択
-
-| 分野 | 選択技術 | AI協働の利点 |
-|------|----------|-------------|
-| API設計 | OpenAPI 3.0 | 仕様から自動コード生成、AIが仕様を理解しやすい |
-| データベース | SQLC + sqldef | 宣言的管理、型安全、AIが構造を理解しやすい |
-| Web框架 | Chi Router | シンプルで予測可能、生成コードとの親和性が高い |
-| 開発環境 | Docker Compose | 環境統一、AIが環境差異に悩まされない |
-| 文档管理 | Redocly | モジュラー管理、大規模APIでもAIが処理しやすい |
-
-### 2. 自動生成重視の選択
-
-**採用理由:**
-- 手動コードを最小化し、AIによる生成・更新を容易にする
-- 設定ファイルベースで変更意図をAIが理解しやすい
-- 型安全性により、AIが生成したコードの品質を保証
-
----
-
-## AI協働開発のベストプラクティス
-
-### 1. コンテキスト提供の技法
-
-#### ✅ 良い依頼方法
-
-```markdown
-**現在の状況:**
-- Atlas から sqldef に移行済み
-- OpenAPI + oapi-codegen で API 生成済み
-- Docker-only 戦略採用
-
-**目標:**
-- SQLC の重複関数定義エラーを解決
-- phone、address フィールドに対応したクエリ生成
-
-**制約:**
-- 既存の API 仕様は変更不可
-- Docker 環境での動作必須
-```
-
-#### ❌ 避けるべき依頼
-
-```markdown
-エラーが出ています。直してください。
-```
-
-### 2. 段階的な開発アプローチ
-
-1. **設計フェーズ**: 全体構造をAIと議論
-2. **実装フェーズ**: 小さな単位で逐次実装
-3. **統合フェーズ**: AIにテスト・検証支援を依頼
-4. **改善フェーズ**: AIと共に問題点を特定・解決
-
-### 3. ファイル変更の原則
-
-- **1つの責務**: 1回の変更で1つの機能・修正に集中
-- **完全なコンテキスト**: 変更対象ファイルの全体像を提供
-- **依存関係の明示**: 影響範囲をAIに伝える
-
----
-
-## 自動化戦略
-
-### 1. 開発フロー自動化
-
-```makefile
-# 開発の基本フロー
-.PHONY: dev-setup
-dev-setup: ## 開発環境初期化
-	docker-compose build
-	docker-compose run --rm api sqldef --dry-run
-
-.PHONY: generate
-generate: ## コード生成
-	docker run --rm -v $(PWD):/workspace -w /workspace \
-		redocly/cli:latest bundle api/openapi.yaml -o api/openapi-bundled.yaml
-	go generate ./...
-	docker run --rm -v $(PWD):/workspace -w /workspace \
-		sqlc/sqlc:latest generate
-
-.PHONY: test
-test: ## テスト実行
-	docker-compose run --rm api go test ./...
-```
-
-### 2. AI支援のための自動化
-
-- **依存関係可視化**: 定期的に依存グラフを生成
-- **コード品質チェック**: linter、formatter の自動実行
-- **ドキュメント生成**: API文档の自動更新
-
----
-
-## 品質保証
-
-### 1. AI生成コードの検証
-
-#### 必須チェックポイント
-
-- [ ] **型安全性**: コンパイルエラーがないか
-- [ ] **API契約**: OpenAPI仕様との整合性
-- [ ] **データベース整合性**: スキーマとクエリの一致
-- [ ] **エラーハンドリング**: 適切な例外処理
-
-#### 自動検証の設定
-
-```yaml
-# .github/workflows/ai-validation.yml
-name: AI Generated Code Validation
-on: [push, pull_request]
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Validate OpenAPI
-        run: redocly lint api/openapi.yaml
-      - name: Validate SQLC
-        run: sqlc vet
-      - name: Build Check
-        run: docker-compose build
-```
-
-### 2. 段階的デプロイメント
-
-1. **開発環境**: AI生成コードの基本動作確認
-2. **ステージング環境**: 統合テスト
-3. **本番環境**: 段階的ロールアウト
-
----
-
-## トラブルシューティング
-
-### 1. よくある問題と対処法
-
-#### SQLC重複定義エラー
-
-**症状:** 同じ関数が複数回定義される
-**原因:** キャッシュや古いファイルの残存
-**対処法:**
+**必須アクション:**
 ```bash
-# 完全クリーンアップ
+# プロジェクト全体像を理解する
+list_dir(/Users/zoo/projects/corporatioin-db)
+read_file(README.md)
+read_file(Makefile)
+```
+
+**確認すべき構造:**
+```
+corporatioin-db/
+├── cmd/api/main.go          # エントリーポイント
+├── internal/
+│   ├── api/                 # OpenAPI生成コード（触らない）
+│   ├── domain/              # ビジネスロジック・エンティティ
+│   ├── infrastructure/      # DB、外部依存
+│   ├── presentation/        # HTTP层・ルーティング
+│   └── usecase/             # アプリケーション層
+├── db/
+│   ├── schema.sql           # DB スキーマ（唯一のソース）
+│   ├── queries/             # SQLC用クエリ
+│   └── migrations/          # マイグレーション
+├── api/openapi.yaml         # API仕様（唯一のソース）
+└── docker-compose.yml      # 開発環境
+```
+
+### 2. 技術スタックの理解
+
+**必須知識:**
+- **Go 1.21+**: メイン言語
+- **PostgreSQL**: データベース
+- **Clean Architecture**: 設計パターン
+- **Docker-only**: ビルド・実行戦略
+- **自動生成重視**: 手動コード最小化
+
+**コード生成ツール:**
+- **SQLC**: SQL → Go コード生成
+- **oapi-codegen**: OpenAPI → Go コード生成
+- **sqldef**: スキーママイグレーション
+
+### 3. 開発フロー確認
+
+**標準フロー:**
+1. **仕様定義**: OpenAPI + DB schema
+2. **コード生成**: `make generate`
+3. **実装**: ビジネスロジック
+4. **テスト**: `make test` または `make docker-test`
+5. **動作確認**: `make docker-run`
+
+---
+
+## プロジェクト理解の原則
+
+### 1. ファイル読取順序
+
+**Phase 1: 設定・仕様理解**
+1. `README.md` - プロジェクト概要
+2. `Makefile` - 利用可能なコマンド
+3. `docker-compose.yml` - 環境構成
+4. `api/openapi.yaml` - API仕様
+5. `db/schema.sql` - データベース設計
+
+**Phase 2: 実装状況確認**
+1. `cmd/api/main.go` - エントリーポイント
+2. `internal/domain/` - ドメインモデル
+3. `internal/infrastructure/` - データアクセス
+4. `internal/usecase/` - ビジネスロジック
+5. `internal/presentation/` - HTTP层
+
+**Phase 3: 生成コード確認**
+1. `internal/api/generated.go` - API実装
+2. `internal/infrastructure/db/` - SQLC生成コード
+
+### 2. 依存関係マップ
+
+```
+presentation → usecase → domain ← infrastructure
+     ↓            ↓                      ↑
+   HTTP       Business                Database
+   Layer      Logic                   Access
+```
+
+**重要:** Clean Architectureの依存方向を守る
+
+---
+
+## 実装アプローチ
+
+### 1. タスク分解原則
+
+**大きなタスクの分解例:**
+```
+「ユーザー管理機能追加」
+├── 1. DB設計（schema.sql更新）
+├── 2. API設計（openapi.yaml更新）
+├── 3. コード生成（make generate）
+├── 4. ドメインモデル実装
+├── 5. リポジトリ実装
+├── 6. ユースケース実装
+├── 7. ハンドラー実装
+└── 8. 統合テスト
+```
+
+### 2. 実装順序
+
+**必須順序:**
+1. **設計変更** → 仕様ファイル更新
+2. **コード生成** → `make generate`実行
+3. **コンパイル確認** → `go build`成功確認
+4. **ビジネスロジック** → domain, usecase実装
+5. **統合** → presentation層実装
+6. **テスト** → 動作確認
+
+### 3. 変更影響範囲の確認
+
+**変更前チェック:**
+```bash
+# 現在のエラー状況確認
+get_errors([target_files])
+
+# 既存機能の動作確認
+run_in_terminal("make docker-test")
+
+# 依存関係確認
+list_code_usages("function_name")
+```
+
+---
+
+## コード生成・修正の原則
+
+### 1. 自動生成ファイルの扱い
+
+**絶対に手動編集禁止:**
+- `internal/api/generated.go`
+- `internal/infrastructure/db/models.go`
+- `internal/infrastructure/db/users.sql.go`
+- `internal/infrastructure/db/db.go`
+
+**編集する場合:**
+1. ソースファイル（openapi.yaml, users.sql）を修正
+2. `make generate`で再生成
+3. 手動編集は一切行わない
+
+### 2. SQLC操作原則
+
+**問題発生時の対応:**
+```bash
+# 1. 生成ファイル完全削除
 rm -rf internal/infrastructure/db/*.sql.go
-docker run --rm -v $(PWD):/workspace -w /workspace sqlc/sqlc:latest generate
+
+# 2. クリーン再生成
+sqlc generate
+
+# 3. エラー確認
+get_errors([generated_files])
 ```
 
-#### OpenAPI生成コードの型不一致
+**重複定義エラー対応:**
+- キャッシュクリア: `go clean -cache`
+- ファイル削除 → 再生成
+- 手動編集の痕跡を完全除去
 
-**症状:** 生成されたGoコードが期待通りでない
-**原因:** OpenAPI仕様の曖昧性
-**対処法:**
-```yaml
-# より厳密な型定義
-components:
-  schemas:
-    User:
-      type: object
-      required: [id, name, email]  # 必須フィールドを明示
-      properties:
-        phone:
-          type: string
-          nullable: true  # NULL許可を明示
+### 3. ファイル編集のベストプラクティス
+
+**insert_edit_into_file使用時:**
+```go
+// 良い例
+type User struct {
+    // ...existing code...
+    Phone   sql.NullString `json:"phone"`
+    Address sql.NullString `json:"address"`
+    // ...existing code...
+}
+
+// 悪い例 - 既存コードを重複記述
+type User struct {
+    ID        int32          `json:"id"`
+    Name      string         `json:"name"`
+    Email     string         `json:"email"`
+    Phone     sql.NullString `json:"phone"`
+    Address   sql.NullString `json:"address"`
+    CreatedAt sql.NullTime   `json:"created_at"`
+    UpdatedAt sql.NullTime   `json:"updated_at"`
+}
 ```
 
-#### Docker ビルドエラー
-
-**症状:** コンテナビルド失敗
-**原因:** 依存関係の不整合、ファイル権限
-**対処法:**
-```bash
-# キャッシュクリア
-docker-compose build --no-cache
-# 権限問題の解決
-chmod +x scripts/*.sh
-```
-
-### 2. AI協働時のデバッグ手法
-
-1. **エラー共有**: 完全なエラーメッセージとスタックトレースを提供
-2. **環境情報**: Go版本、Docker版本、OS情報を明示
-3. **再現手順**: AIが問題を再現できる手順を提供
+**replace_string_in_file使用時:**
+- 5行程度のコンテキストを含める
+- 置換対象の一意性を保証
+- 変更前後でファイル構造を破綻させない
 
 ---
 
-## 継続的改善
+## 品質保証チェックリスト
 
-### 1. 定期的な技術更新
+### 1. 実装完了前の必須チェック
 
-- **月次**: 依存関係の更新確認
-- **四半期**: 新しいAI開発ツールの評価
-- **半年**: アーキテクチャの見直し
+**コンパイル・ビルド:**
+- [ ] `go build cmd/api/main.go` 成功
+- [ ] `make docker-build` 成功
+- [ ] `get_errors()` でエラーなし
 
-### 2. AI協働の改善
+**機能性:**
+- [ ] 新機能のAPI仕様準拠
+- [ ] 既存機能への副作用なし
+- [ ] データベース操作の正確性
 
-#### 効果測定指標
+**Clean Architecture準拠:**
+- [ ] 依存方向の正確性
+- [ ] 層間の適切な責務分離
+- [ ] インターフェースを通じた依存注入
 
-- **開発速度**: 機能実装までの時間
-- **品質**: バグ発生率、テストカバレッジ
-- **保守性**: コード変更の影響範囲
+### 2. テスト実行
 
-#### 改善サイクル
+**必須テスト:**
+```bash
+# 単体テスト
+go test ./...
 
-1. **振り返り**: AI協働での問題点抽出
-2. **実験**: 新しいアプローチの試行
-3. **評価**: 効果測定と判断
-4. **標準化**: 有効な手法のガイドライン化
+# 統合テスト（Docker環境）
+make docker-test
+
+# API動作確認
+make docker-run
+curl http://localhost:8080/health
+```
+
+### 3. セキュリティチェック
+
+**基本確認:**
+- [ ] SQLインジェクション対策（SQLC使用）
+- [ ] 入力バリデーション実装
+- [ ] エラー情報の適切なマスキング
+- [ ] CORS設定の確認
+
+---
+
+## エラー対応プロトコル
+
+### 1. エラー分類と対応
+
+**Type A: コンパイルエラー**
+```
+対応手順:
+1. get_errors()で詳細確認
+2. 文法・型エラーの修正
+3. import文の調整
+4. 再コンパイル確認
+```
+
+**Type B: SQLC生成エラー**
+```
+対応手順:
+1. 生成ファイル完全削除
+2. SQLクエリ構文確認
+3. スキーマとの整合性確認
+4. sqlc generate実行
+```
+
+**Type C: Docker関連エラー**
+```
+対応手順:
+1. コンテナログ確認
+2. docker-compose.yml検証
+3. 環境変数設定確認
+4. ネットワーク・ボリューム確認
+```
+
+### 2. エラー報告形式
+
+**人間への報告時:**
+```markdown
+## エラー概要
+[簡潔な説明]
+
+## 発生状況
+- ファイル: [対象ファイル]
+- 操作: [実行していた操作]
+- 環境: [Docker/ローカル]
+
+## エラー詳細
+```
+[完全なエラーメッセージ]
+```
+
+## 実施した対応
+1. [試行した解決策1]
+2. [試行した解決策2]
+
+## 追加調査が必要な点
+[調査すべき箇所]
+```
+
+### 3. デバッグ戦略
+
+**段階的アプローチ:**
+1. **最小再現**: 最小コードでエラー再現
+2. **分離確認**: 個別コンポーネントの動作確認
+3. **統合テスト**: 段階的な統合
+4. **環境確認**: Docker環境での最終確認
+
+---
+
+## コミュニケーション原則
+
+### 1. 進捗報告
+
+**実装開始時:**
+```markdown
+## 作業開始
+- タスク: [具体的なタスク]
+- アプローチ: [採用する手法]
+- 影響範囲: [変更予定ファイル]
+- 所要時間見積: [XX分程度]
+```
+
+**実装中:**
+```markdown
+## 進捗状況
+- 完了: [完了した項目]
+- 作業中: [現在の作業]
+- 問題: [発生した問題]
+- 次のステップ: [予定している作業]
+```
+
+**完了時:**
+```markdown
+## 実装完了
+- 変更ファイル: [変更したファイル]
+- テスト結果: [テスト実行結果]
+- 動作確認: [確認した機能]
+- 注意事項: [運用上の注意点]
+```
+
+### 2. 質問・確認事項
+
+**技術的判断が必要な場合:**
+```markdown
+## 実装方針の確認
+
+**状況:**
+[現在の状況説明]
+
+**選択肢:**
+A. [選択肢A] - メリット: [...] デメリット: [...]
+B. [選択肢B] - メリット: [...] デメリット: [...]
+
+**推奨:**
+[AI的推奨案と理由]
+
+**判断をお願いします:**
+[人間に決定してもらいたい事項]
+```
+
+### 3. 学習・改善提案
+
+**プロジェクト改善案:**
+```markdown
+## 改善提案
+
+**問題:**
+[発見した問題・非効率]
+
+**提案:**
+[具体的な改善案]
+
+**期待効果:**
+[改善によるメリット]
+
+**実装コスト:**
+[必要な作業量]
+```
 
 ---
 
 ## 付録
 
-### A. 推奨開発環境
+### A. 重要なファイル・ディレクトリ
 
-```json
-// .vscode/settings.json
-{
-  "go.toolsManagement.checkForUpdates": "local",
-  "go.useLanguageServer": true,
-  "go.lintTool": "golangci-lint",
-  "files.associations": {
-    "*.yaml": "yaml",
-    "docker-compose*.yml": "dockercompose"
-  }
-}
+**設定ファイル（要理解）:**
+- `sqlc.yaml` - SQLC設定
+- `oapi-codegen.yaml` - API生成設定
+- `docker-compose.yml` - 環境設定
+- `Makefile` - コマンド定義
+
+**ソースファイル（編集対象）:**
+- `api/openapi.yaml` - API仕様
+- `db/schema.sql` - DB設計
+- `db/queries/*.sql` - SQLクエリ
+- `internal/domain/` - ドメインモデル
+- `internal/usecase/` - ビジネスロジック
+- `internal/presentation/` - HTTPハンドラー
+
+**生成ファイル（編集禁止）:**
+- `internal/api/generated.go`
+- `internal/infrastructure/db/`
+
+### B. よく使用するコマンド
+
+```bash
+# コード生成
+make generate
+
+# テスト実行
+make test
+make docker-test
+
+# 環境起動
+make docker-run
+
+# クリーンアップ
+make clean
+go clean -cache
+
+# SQLC単体実行
+sqlc generate
+sqlc vet
 ```
 
-### B. 有用なVSCode拡張機能
+### C. トラブルシューティング頻出パターン
 
-- **Go**: Go言語サポート
-- **Docker**: コンテナ管理
-- **OpenAPI (Swagger) Editor**: API仕様編集
-- **SQLTools**: データベース管理
-- **GitHub Copilot**: AI支援
+**SQLC重複定義:**
+```bash
+rm -rf internal/infrastructure/db/*.sql.go
+sqlc generate
+```
 
-### C. AI協働チェックリスト
+**Docker build失敗:**
+```bash
+docker-compose build --no-cache
+docker system prune
+```
 
-開発開始時:
-- [ ] プロジェクト構造をAIに説明
-- [ ] 現在の技術スタックを明示
-- [ ] 制約条件・要件を整理
-
-実装中:
-- [ ] 小さな単位で逐次確認
-- [ ] エラーは即座に共有
-- [ ] 生成コードの検証を実施
-
-完了時:
-- [ ] 統合テスト実行
-- [ ] ドキュメント更新
-- [ ] 次回開発のメモ記録
+**Go module問題:**
+```bash
+go mod tidy
+go clean -cache
+```
 
 ---
 
 **作成日**: 2025年5月30日  
-**バージョン**: 1.0  
-**プロジェクト**: corporatioin-db  
-**更新履歴**: 初版作成
+**バージョン**: 2.0  
+**対象**: AI実装者  
+**プロジェクト**: corporatioin-db

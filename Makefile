@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run schema-export schema-check
+.PHONY: help build run test clean docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run generate-api schema-export schema-check
 
 # デフォルトターゲット
 help:
@@ -10,6 +10,7 @@ help:
 	@echo "  docker-up      - Start Docker containers"
 	@echo "  docker-down    - Stop Docker containers"
 	@echo "  sqlc-generate  - Generate code from SQL"
+	@echo "  generate-api   - Generate API code from OpenAPI spec"
 	@echo ""
 	@echo "sqldef commands:"
 	@echo "  schema-apply   - Apply schema changes to database"
@@ -49,6 +50,10 @@ docker-run:
 # SQLCでコードを生成
 sqlc-generate:
 	sqlc generate
+
+# oapi-codegenでAPIコードを生成
+generate-api:
+	oapi-codegen --config oapi-codegen.yaml api/openapi.yaml
 
 # sqldef: スキーマを適用
 schema-apply:

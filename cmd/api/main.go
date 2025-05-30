@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"os"
 
+	"corporation-db/internal/api"
 	"corporation-db/internal/infrastructure"
-	"corporation-db/internal/presentation"
-	"corporation-db/internal/usecase"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 )
 
@@ -27,21 +28,27 @@ func main() {
 	}
 	defer db.Close()
 
-	// Repositories
-	userRepo := infrastructure.NewUserRepository(db)
+	// Create API server
+	apiServer := api.NewAPIServer()
 
-	// Use cases
-	userUsecase := usecase.NewUserUsecase(userRepo)
+	// Setup Chi router
+	r := chi.NewRouter()
+	
+	// Middleware
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
 
-	// Router
-	router := presentation.NewRouter(userUsecase)
-	r := router.SetupRoutes()
+	// Mount OpenAPI generated handlers
+	api.HandlerFromMux(apiServer, r)
 
 	// Server
 	port := getEnv("PORT", "8080")
 	addr := fmt.Sprintf(":%s", port)
 
 	log.Printf("Server starting on port %s", port)
+	log.Printf("OpenAPI documentation available at http://localhost:%s/", port)
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}

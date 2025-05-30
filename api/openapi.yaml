@@ -91,6 +91,12 @@ components:
           type: string
           format: email
           example: "john@example.com"
+        phone:
+          type: string
+          example: "123-456-7890"
+        address:
+          type: string
+          example: "123 Main St, City, Country"
         created_at:
           type: string
           format: date-time
@@ -111,3 +117,9 @@ components:
           type: string
           format: email
           example: "john@example.com"
+        phone:
+          type: string
+          example: "123-456-7890"
+        address:
+          type: string
+          example: "123 Main St, City, Country"

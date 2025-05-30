@@ -12,7 +12,7 @@ Go言語で構築されたクリーンアーキテクチャベースのWebアプ
 - **API仕様**: OpenAPI 3.0 + Redocly
 - **APIコード生成**: oapi-codegen
 - **アーキテクチャ**: クリーンアーキテクチャ
-- **コンテナ**: Docker & Docker Compose
+- **実行環境**: Docker & Docker Compose
 
 ## プロジェクト構造
 
@@ -40,11 +40,10 @@ Go言語で構築されたクリーンアーキテクチャベースのWebアプ
 
 ### 必要な環境
 
-- Go 1.21+
 - Docker & Docker Compose
 - Make (オプション)
 
-### 開発環境の起動
+### アプリケーション起動
 
 1. リポジトリをクローン
 ```bash
@@ -52,27 +51,14 @@ git clone <repository-url>
 cd corporation-db
 ```
 
-2. Docker環境を起動
-```bash
-make docker-up
-# または
-docker-compose up -d
-```
-
-3. アプリケーションを起動
-```bash
-make run
-# または
-go run ./cmd/api
-```
-
-### Docker環境での完全な起動
-
+2. Docker環境でアプリケーションを起動
 ```bash
 make docker-run
 # または
 docker-compose up --build
 ```
+
+アプリケーションは http://localhost:8080 でアクセス可能になります。
 
 ## 開発状況
 
@@ -177,46 +163,37 @@ curl http://localhost:8080/users
 curl http://localhost:8080/users/1
 ```
 
-## 開発
+## 開発ワークフロー
 
-### SQLCでコードを生成
+### コード生成とツール
 
-SQLファイルを変更した後、以下のコマンドでコードを再生成します：
+このプロジェクトではDockerベースのツールチェーンを使用しています。
 
 ```bash
+# SQLCでデータベースコードを生成
 make sqlc-generate
-# または
-sqlc generate
+
+# OpenAPIからAPIコードを生成
+make generate-api
 ```
 
-### テスト実行
+## 環境設定
 
-```bash
-make test
-# または
-go test -v ./...
+### Docker Compose環境変数
+
+アプリケーションの設定は`docker-compose.yml`で管理されています：
+
+```yaml
+environment:
+  - DB_HOST=db
+  - DB_PORT=5432
+  - DB_USER=postgres
+  - DB_PASSWORD=password
+  - DB_NAME=corporation_db
+  - PORT=8080
 ```
 
-### ビルド
-
-```bash
-make build
-# または
-go build -o bin/api ./cmd/api
-```
-
-## 環境変数
-
-以下の環境変数を設定できます（`.env`ファイルまたは環境変数として）：
-
-```
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=password
-DB_NAME=corporation_db
-PORT=8080
-```
+カスタマイズが必要な場合は、`.env`ファイルを作成するか`docker-compose.override.yml`を使用してください。
 
 ## データベース
 

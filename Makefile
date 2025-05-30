@@ -1,12 +1,9 @@
-.PHONY: help build run test clean docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check
+.PHONY: help docker-run docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check
 
 # デフォルトターゲット
 help:
 	@echo "Available commands:"
-	@echo "  build          - Build the application"
-	@echo "  run            - Run the application locally"
-	@echo "  test           - Run tests"
-	@echo "  clean          - Clean build artifacts"
+	@echo "  docker-run     - Start application with Docker (recommended)"
 	@echo "  docker-up      - Start Docker containers"
 	@echo "  docker-down    - Stop Docker containers"
 	@echo "  sqlc-generate  - Generate code from SQL"
@@ -24,33 +21,17 @@ help:
 	@echo "  schema-export  - Export current database schema"
 	@echo "  schema-check   - Check database connection and status"
 
-# アプリケーションをビルド
-build:
-	go build -o bin/api ./cmd/api
+# Docker環境でアプリケーションを起動（推奨）
+docker-run:
+	docker-compose up --build
 
-# アプリケーションをローカルで実行
-run:
-	go run ./cmd/api
-
-# テストを実行
-test:
-	go test -v ./...
-
-# ビルド成果物をクリーンアップ
-clean:
-	rm -rf bin/
-
-# Dockerコンテナを起動
+# Dockerコンテナを起動（バックグラウンド）
 docker-up:
 	docker-compose up -d
 
 # Dockerコンテナを停止
 docker-down:
 	docker-compose down
-
-# Docker環境でアプリケーションを起動（DBも含む）
-docker-run:
-	docker-compose up --build
 
 # SQLCでコードを生成
 sqlc-generate:

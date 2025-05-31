@@ -103,12 +103,15 @@ docker-compose exec db psql -U postgres -d corporation_db -c "\dt"
 
 ```bash
 # ダウンロード用コンテナでデータ取得（推奨）
-docker-compose run --rm download \
+docker-compose run --rm download ./download \
   -output /data/gbiz_$(date +%Y%m%d_%H%M%S).zip
 
 # または、固定ファイル名でダウンロード
-docker-compose run --rm download \
+docker-compose run --rm download ./download \
   -output /data/gbiz_latest.zip
+
+# Makefileターゲット使用（推奨）
+make download-data-docker
 ```
 
 **確認ポイント:**
@@ -392,6 +395,45 @@ docker-compose down -v
 2. **OpenAPI + oapi-codegen 実装**: 自動コード生成とChi統合完了
 3. **Redocly分割ファイル管理**: モジュラーOpenAPI仕様管理完了
 4. **データベース統合**: 実際のPostgreSQLクエリによるAPI実装完了
+5. **Docker実行環境修正**: Docker download実行時の引数渡し問題とファイルシステム問題の修正完了
+
+### 🔧 最近の修正 (2025年5月31日)
+
+#### Docker Download実行時の問題修正
+
+**問題**: 
+- Makefileの`docker-compose run`コマンドでdownloadバイナリに引数が正しく渡されない
+- Dockerボリュームマウント環境でのファイル移動（`os.Rename`）がクロスファイルシステムエラーで失敗
+
+**修正内容**:
+
+1. **Makefile修正**: Docker引数渡し問題の解決
+   ```makefile
+   # 修正前（引数が正しく渡されない）
+   docker-compose run --rm download -output /data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
+
+   # 修正後（バイナリパスを明示的に指定）
+   docker-compose run --rm download ./download -output /data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
+   ```
+
+2. **ファイルシステム修正**: `cmd/download/main.go`
+   ```go
+   // 修正前: クロスファイルシステムでエラー
+   err = os.Rename(zipPath, *outputPath)
+
+   // 修正後: copyFile関数による安全なファイル移動
+   err = copyFile(zipPath, *outputPath)
+   
+   // copyFile関数を追加
+   func copyFile(src, dst string) error {
+       // io.Copy使用による安全なファイルコピー実装
+   }
+   ```
+
+**修正結果**:
+- ✅ Docker環境でのダウンロードコマンドが正常動作
+- ✅ ファイル移動処理がクロスファイルシステム環境で安定動作
+- ✅ データ取得からインポートまでの完全なパイプラインが機能
 
 ### 🚧 進行中/次のステップ
 1. **APIドキュメント プレビューサーバー**: Redoclyプレビューの設定

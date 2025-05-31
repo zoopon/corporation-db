@@ -74,5 +74,36 @@ services:
     profiles:
       - batch
 
+  # Download service for gBizINFO data
+  download:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: download
+    volumes:
+      - ./data:/data
+    profiles:
+      - data
+
+  # Import service for gBizINFO data
+  import:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: import
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=corporation_db
+    volumes:
+      - ./data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - data
+
 volumes:
   postgres_data:

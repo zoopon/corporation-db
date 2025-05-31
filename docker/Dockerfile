@@ -19,6 +19,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o api ./cmd/api
 # バッチ用のアプリケーションをビルド
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o batch ./cmd/batch
 
+# ダウンロード用のアプリケーションをビルド
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o download ./cmd/download
+
+# インポート用のアプリケーションをビルド
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o import ./cmd/import
+
 # API実行用の軽量イメージ
 FROM alpine:latest AS api
 
@@ -45,3 +51,27 @@ COPY --from=builder /app/batch .
 
 # バッチアプリケーションを実行
 CMD ["./batch"]
+
+# ダウンロード実行用の軽量イメージ
+FROM alpine:latest AS download
+
+RUN apk --no-cache add ca-certificates tzdata
+WORKDIR /root/
+
+# ビルドしたダウンロードバイナリをコピー
+COPY --from=builder /app/download .
+
+# ダウンロードアプリケーションを実行
+CMD ["./download"]
+
+# インポート実行用の軽量イメージ
+FROM alpine:latest AS import
+
+RUN apk --no-cache add ca-certificates tzdata
+WORKDIR /root/
+
+# ビルドしたインポートバイナリをコピー
+COPY --from=builder /app/import .
+
+# インポートアプリケーションを実行
+CMD ["./import"]

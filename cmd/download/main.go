@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -60,10 +61,10 @@ func main() {
 
 	log.Printf("Downloaded ZIP file: %s", zipPath)
 
-	// Move the downloaded file to the specified output path
-	err = os.Rename(zipPath, *outputPath)
+	// Copy the downloaded file to the specified output path
+	err = copyFile(zipPath, *outputPath)
 	if err != nil {
-		log.Fatalf("Failed to move downloaded file to output path: %v", err)
+		log.Fatalf("Failed to copy downloaded file to output path: %v", err)
 	}
 
 	log.Printf("Successfully downloaded and saved to: %s", *outputPath)
@@ -76,6 +77,28 @@ func main() {
 	}
 
 	log.Println("Download completed successfully")
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open source file: %w", err)
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return fmt.Errorf("failed to copy file: %w", err)
+	}
+
+	return nil
 }
 
 func showHelp() {

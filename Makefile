@@ -41,11 +41,13 @@ help:
 	@echo "  batch-docker   - Run batch import in Docker"
 	@echo ""
 	@echo "Download and Import operations:"
-	@echo "  download-build - Build download command"
-	@echo "  import-build   - Build import command"
-	@echo "  build-all      - Build all commands"
-	@echo "  download-data  - Download data from gBizINFO"
-	@echo "  import-data    - Import data from ZIP file"
+	@echo "  download-build       - Build download command"
+	@echo "  import-build         - Build import command"
+	@echo "  build-all            - Build all commands"
+	@echo "  download-data        - Download data from gBizINFO (local)"
+	@echo "  download-data-docker - Download data from gBizINFO (Docker)"
+	@echo "  import-data          - Import data from ZIP file (local)"
+	@echo "  import-data-docker   - Import data from ZIP file (Docker)"
 
 # Docker環境でアプリケーションを起動（推奨）
 docker-run:
@@ -161,10 +163,19 @@ download-data: download-build
 	@echo "Downloading data from gBizINFO..."
 	./bin/download -output ./data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
 
+download-data-docker:
+	@echo "Downloading data from gBizINFO using Docker..."
+	docker-compose run --rm download ./download -output /data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
+
 import-data: import-build
 	@echo "Importing data from ZIP file..."
 	@read -p "Enter ZIP file path: " zipfile; \
 	./bin/import -input "$$zipfile"
+
+import-data-docker:
+	@echo "Importing data from ZIP file using Docker..."
+	@read -p "Enter ZIP file path (relative to ./data/): " zipfile; \
+	docker-compose run --rm import ./import -zip-file "/data/$$zipfile"
 
 # Database operations
 db-reset:

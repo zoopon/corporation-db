@@ -42,6 +42,9 @@ make docker-run
 
 # 全生成処理実行
 make generate-all
+
+# gBizINFOデータのインポート（バッチ処理）
+make batch-run
 ```
 
 ### コード生成
@@ -97,6 +100,8 @@ go mod download
 - [ ] `docker-compose up` でサービス起動
 - [ ] ヘルスチェックエンドポイント応答確認
 - [ ] データベース接続確認
+- [ ] 法人情報API（`/corporations`）の動作確認
+- [ ] 都道府県フィルタリング（`?prefecture_code=13`等）の動作確認
 
 ---
 
@@ -168,13 +173,14 @@ docker-compose build --no-cache
 │
 ├── 🗄️ データベース
 │   ├── db/schema.sql         # テーブル定義（sqldef用）
-│   └── db/queries/users.sql  # SQL クエリ（SQLC用）
+│   └── db/queries/corporations.sql  # SQL クエリ（SQLC用）
 │
 ├── 🏗️ アプリケーション
-│   ├── cmd/api/main.go       # エントリーポイント
+│   ├── cmd/api/main.go       # APIサーバーエントリーポイント
+│   ├── cmd/download/main.go  # gBizINFOバッチエントリーポイント
 │   ├── internal/api/         # 生成されたAPIコード
 │   ├── internal/domain/      # ビジネスロジック
-│   ├── internal/infrastructure/  # 外部依存
+│   ├── internal/infrastructure/  # 外部依存・データアクセス
 │   ├── internal/presentation/    # HTTP層
 │   └── internal/usecase/     # アプリケーション層
 │
@@ -272,5 +278,79 @@ func (q *Queries) GetUserByID redeclared in this block
 
 ---
 
-**最終更新**: 2025年5月30日  
-**バージョン**: 1.0
+## 🔗 API使用例
+
+### 法人情報API
+
+```bash
+# 全法人情報を取得
+curl http://localhost:8080/corporations
+
+# 東京都の法人のみ取得 (prefecture_code=13)
+curl "http://localhost:8080/corporations?prefecture_code=13"
+
+# 北海道の法人のみ取得 (prefecture_code=01) 
+curl "http://localhost:8080/corporations?prefecture_code=01"
+
+# 沖縄県の法人のみ取得 (prefecture_code=47)
+curl "http://localhost:8080/corporations?prefecture_code=47"
+
+# 複数条件での検索例
+curl "http://localhost:8080/corporations?name=株式会社&prefecture_code=13"
+```
+
+### データインポート確認
+
+```bash
+# gBizINFOデータをダウンロード・インポート
+make batch-run
+
+# インポート後の確認
+curl "http://localhost:8080/corporations?limit=5"
+
+# 特定都道府県のデータ確認
+curl "http://localhost:8080/corporations?prefecture_code=13&limit=10"
+```
+
+### 都道府県コード参照表
+
+| コード | 都道府県 | 使用例 |
+|-------|----------|--------|
+| 01 | 北海道 | `?prefecture_code=01` |
+| 13 | 東京都 | `?prefecture_code=13` |
+| 27 | 大阪府 | `?prefecture_code=27` |
+| 40 | 福岡県 | `?prefecture_code=40` |
+| 47 | 沖縄県 | `?prefecture_code=47` |
+
+*全47都道府県のコード一覧は[README.md](README.md)を参照*
+
+---
+
+## 🐛 トラブルシューティング: 都道府県フィルタリング
+
+### 都道府県コードが正しく抽出されない場合
+
+```bash
+# CSVデータの都道府県フィールド確認
+head -5 data/gbiz_*.csv | cut -d',' -f4
+
+# データベースの都道府県コード分布確認
+docker-compose exec db psql -U postgres -d corporation_db -c \
+  "SELECT prefecture_code, COUNT(*) FROM corporations GROUP BY prefecture_code ORDER BY prefecture_code;"
+```
+
+### APIフィルタリングが効かない場合
+
+```bash
+# エンドポイント仕様確認
+curl -v "http://localhost:8080/corporations?prefecture_code=13"
+
+# データベース直接確認
+docker-compose exec db psql -U postgres -d corporation_db -c \
+  "SELECT name, location, prefecture_code FROM corporations WHERE prefecture_code = '13' LIMIT 5;"
+```
+
+---
+
+**最終更新**: 2025年5月31日  
+**バージョン**: 1.1 - Prefecture Code Filtering対応

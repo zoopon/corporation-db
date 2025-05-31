@@ -413,6 +413,7 @@ B. [選択肢B] - メリット: [...] デメリット: [...]
 - `internal/domain/` - ドメインモデル
 - `internal/usecase/` - ビジネスロジック
 - `internal/presentation/` - HTTPハンドラー
+- `internal/infrastructure/gbiz_client.go` - 外部データ取得・都道府県コード抽出
 
 **生成ファイル（編集禁止）:**
 - `internal/api/generated.go`
@@ -431,6 +432,9 @@ make docker-test
 # 環境起動
 make docker-run
 
+# バッチ処理（gBizINFOデータインポート）
+make batch-run
+
 # クリーンアップ
 make clean
 go clean -cache
@@ -440,29 +444,248 @@ sqlc generate
 sqlc vet
 ```
 
-### C. トラブルシューティング頻出パターン
+### C. 都道府県フィルタリング機能の実装パターン
 
-**SQLC重複定義:**
-```bash
-rm -rf internal/infrastructure/db/*.sql.go
-sqlc generate
+**データベース設計:**
+```sql
+-- prefecture_codeカラム追加例
+ALTER TABLE corporations ADD COLUMN prefecture_code VARCHAR(2);
+CREATE INDEX idx_corporations_prefecture_code ON corporations(prefecture_code);
 ```
 
-**Docker build失敗:**
-```bash
-docker-compose build --no-cache
-docker system prune
+**SQL クエリパターン:**
+```sql
+-- 都道府県フィルタリング対応クエリ例
+SELECT * FROM corporations 
+WHERE ($1 = '' OR name ILIKE '%' || $1 || '%')
+  AND ($2 = '' OR prefecture_code = $2)
+ORDER BY id LIMIT $3 OFFSET $4;
 ```
 
-**Go module問題:**
-```bash
-go mod tidy
-go clean -cache
+**都道府県コード抽出ロジック:**
+```go
+// 所在地文字列から都道府県コードを抽出
+func extractPrefectureCode(location string) string {
+    prefectureMap := map[string]string{
+        "北海道": "01", "青森": "02", "岩手": "03", // ...
+    }
+    
+    for prefecture, code := range prefectureMap {
+        if strings.Contains(location, prefecture) {
+            return code
+        }
+    }
+    return ""
+}
 ```
 
 ---
 
-**作成日**: 2025年5月30日  
-**バージョン**: 2.0  
-**対象**: AI実装者  
-**プロジェクト**: corporatioin-db
+## 実装例: 都道府県フィルタリング機能
+
+### 完全実装例
+
+都道府県コードによるフィルタリング機能の実装手順を示します。
+
+#### 1. データベーススキーマ更新
+
+```sql
+-- db/schema.sql
+CREATE TABLE IF NOT EXISTS corporations (
+    id SERIAL PRIMARY KEY,
+    corporate_number VARCHAR(13) UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    location TEXT,
+    prefecture_code VARCHAR(2), -- 追加
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- インデックス追加（フィルタリング高速化）
+CREATE INDEX IF NOT EXISTS idx_corporations_prefecture_code 
+ON corporations(prefecture_code);
+```
+
+#### 2. OpenAPI仕様更新
+
+```yaml
+# api/components/schemas/Corporation.yaml
+Corporation:
+  type: object
+  properties:
+    id:
+      type: integer
+    corporate_number:
+      type: string
+    name:
+      type: string
+    location:
+      type: string
+    prefecture_code:  # 追加
+      type: string
+      description: "JIS X 0401準拠の都道府県コード (01-47)"
+      example: "13"
+
+# api/paths/corporations.yaml
+parameters:
+  - name: prefecture_code
+    in: query
+    description: "都道府県コード (JIS X 0401準拠、01-47)"
+    schema:
+      type: string
+      pattern: "^(0[1-9]|[1-4][0-9])$"
+    example: "13"
+```
+
+#### 3. SQLクエリ更新
+
+```sql
+-- db/queries/corporations.sql
+-- name: GetCorporationsWithFilter :many
+SELECT * FROM corporations
+WHERE ($1 = '' OR name ILIKE '%' || $1 || '%')
+  AND ($2 = '' OR prefecture_code = $2)  -- 追加
+ORDER BY id LIMIT $3 OFFSET $4;
+
+-- name: CountCorporationsWithFilter :one
+SELECT COUNT(*) FROM corporations
+WHERE ($1 = '' OR name ILIKE '%' || $1 || '%')
+  AND ($2 = '' OR prefecture_code = $2);  -- 追加
+```
+
+#### 4. ドメインモデル更新
+
+```go
+// internal/domain/corporation.go
+type Corporation struct {
+    ID               int32     `json:"id"`
+    CorporateNumber  string    `json:"corporate_number"`
+    Name            string    `json:"name"`
+    Location        *string   `json:"location"`
+    PrefectureCode  *string   `json:"prefecture_code"`  // 追加
+    CreatedAt       time.Time `json:"created_at"`
+    UpdatedAt       time.Time `json:"updated_at"`
+}
+
+type CorporationFilter struct {
+    Name           string `json:"name"`
+    PrefectureCode string `json:"prefecture_code"`  // 追加
+    Limit          int32  `json:"limit"`
+    Offset         int32  `json:"offset"`
+}
+```
+
+#### 5. 都道府県コード抽出ロジック
+
+```go
+// internal/infrastructure/gbiz_client.go
+func extractPrefectureCode(location string) string {
+    if location == "" {
+        return ""
+    }
+    
+    // 都道府県名マッピング (JIS X 0401準拠)
+    prefectureMap := map[string]string{
+        "北海道": "01", "青森": "02", "岩手": "03", "宮城": "04",
+        "秋田": "05", "山形": "06", "福島": "07", "茨城": "08",
+        // ... 全47都道府県
+        "沖縄": "47",
+    }
+    
+    // 主要都市による判定（フォールバック）
+    cityToPrefecture := map[string]string{
+        "札幌": "01", "青森": "02", "盛岡": "03", "仙台": "04",
+        // ... 主要都市マッピング
+        "那覇": "47",
+    }
+    
+    // 都道府県名での完全一致チェック
+    for prefecture, code := range prefectureMap {
+        if strings.Contains(location, prefecture) {
+            return code
+        }
+    }
+    
+    // 都市名でのフォールバック
+    for city, code := range cityToPrefecture {
+        if strings.Contains(location, city) {
+            return code
+        }
+    }
+    
+    return ""
+}
+```
+
+#### 6. APIハンドラー更新
+
+```go
+// internal/presentation/corporation_handler.go
+func (h *CorporationHandler) GetCorporations(w http.ResponseWriter, r *http.Request) {
+    nameFilter := r.URL.Query().Get("name")
+    prefectureCode := r.URL.Query().Get("prefecture_code")  // 追加
+    
+    filter := domain.CorporationFilter{
+        Name:           nameFilter,
+        PrefectureCode: prefectureCode,  // 追加
+        Limit:          parseLimit(r.URL.Query().Get("limit")),
+        Offset:         parseOffset(r.URL.Query().Get("offset")),
+    }
+    
+    corporations, err := h.usecase.GetCorporationsWithFilter(r.Context(), filter)
+    // ... エラーハンドリング・レスポンス処理
+}
+```
+
+#### 7. テスト実装
+
+```go
+// internal/infrastructure/gbiz_client_test.go
+func TestExtractPrefectureCode(t *testing.T) {
+    tests := []struct {
+        name     string
+        location string
+        expected string
+    }{
+        {"Tokyo", "東京都新宿区", "13"},
+        {"Hokkaido", "北海道札幌市", "01"},
+        {"Okinawa", "沖縄県那覇市", "47"},
+        {"Empty", "", ""},
+        {"Unknown", "不明な地域", ""},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result := extractPrefectureCode(tt.location)
+            assert.Equal(t, tt.expected, result)
+        })
+    }
+}
+```
+
+### 実装チェックリスト
+
+#### ✅ データベース層
+- [ ] スキーマにprefecture_codeカラム追加
+- [ ] インデックス追加でフィルタリング高速化
+- [ ] SQLクエリにWHERE条件追加
+
+#### ✅ API層
+- [ ] OpenAPI仕様にprefecture_codeパラメータ追加
+- [ ] レスポンススキーマにprefecture_codeフィールド追加
+- [ ] コード生成でAPI層更新
+
+#### ✅ アプリケーション層
+- [ ] ドメインモデルにPrefectureCodeフィールド追加
+- [ ] フィルタ構造体にprefecture_code追加
+- [ ] 都道府県コード抽出ロジック実装
+
+#### ✅ インフラ層
+- [ ] リポジトリでprefecture_codeフィルタリング対応
+- [ ] CSVインポート時の都道府県コード自動抽出
+- [ ] バッチ処理での一括更新対応
+
+#### ✅ プレゼンテーション層
+- [ ] HTTPハンドラーでクエリパラメータ受け取り
+- [ ] レスポンスにprefecture_code含める
+- [ ] エラーハンドリング適切に実装

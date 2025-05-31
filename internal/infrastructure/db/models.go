@@ -16,6 +16,7 @@ type Corporation struct {
 	NameEn                 sql.NullString `json:"name_en"`
 	PostalCode             sql.NullString `json:"postal_code"`
 	Location               sql.NullString `json:"location"`
+	PrefectureCode         sql.NullString `json:"prefecture_code"`
 	Status                 string         `json:"status"`
 	CloseDate              sql.NullTime   `json:"close_date"`
 	CloseCause             sql.NullString `json:"close_cause"`
@@ -35,4 +36,11 @@ type Corporation struct {
 	UpdateDate             sql.NullTime   `json:"update_date"`
 	CreatedAt              sql.NullTime   `json:"created_at"`
 	UpdatedAt              sql.NullTime   `json:"updated_at"`
+}
+
+type User struct {
+	ID        int32        `json:"id"`
+	Name      string       `json:"name"`
+	CreatedAt sql.NullTime `json:"created_at"`
+	UpdatedAt sql.NullTime `json:"updated_at"`
 }

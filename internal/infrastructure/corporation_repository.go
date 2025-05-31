@@ -52,6 +52,7 @@ func (r *CorporationRepository) GetWithFilter(ctx context.Context, filter domain
 	name := ""
 	prefecture := ""
 	status := ""
+	prefectureCode := ""
 
 	if filter.CorporateNumber != nil {
 		corporateNumber = *filter.CorporateNumber
@@ -65,6 +66,9 @@ func (r *CorporationRepository) GetWithFilter(ctx context.Context, filter domain
 	if filter.Status != nil {
 		status = *filter.Status
 	}
+	if filter.PrefectureCode != nil {
+		prefectureCode = *filter.PrefectureCode
+	}
 
 	// Get total count
 	total, err := r.queries.CountCorporationsWithFilter(ctx, db.CountCorporationsWithFilterParams{
@@ -72,6 +76,7 @@ func (r *CorporationRepository) GetWithFilter(ctx context.Context, filter domain
 		Column2: name,
 		Column3: prefecture,
 		Column4: status,
+		Column5: prefectureCode,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count corporations: %w", err)
@@ -83,6 +88,7 @@ func (r *CorporationRepository) GetWithFilter(ctx context.Context, filter domain
 		Column2: name,
 		Column3: prefecture,
 		Column4: status,
+		Column5: prefectureCode,
 		Limit:   int32(filter.Limit),
 		Offset:  int32(filter.Offset),
 	})
@@ -161,6 +167,7 @@ func (r *CorporationRepository) BulkUpsert(ctx context.Context, corporations []*
 				NameEn:                 r.stringToNullString(corp.NameEn),
 				PostalCode:             r.stringToNullString(corp.PostalCode),
 				Location:               r.stringToNullString(corp.Location),
+				PrefectureCode:         r.stringToNullString(corp.PrefectureCode),
 				Status:                 corp.Status,
 				CloseDate:              r.timeToNullTime(corp.CloseDate),
 				CloseCause:             r.stringToNullString(corp.CloseCause),
@@ -209,6 +216,7 @@ func (r *CorporationRepository) dbToDomainCorporation(dbCorp *db.Corporation) (*
 		NameEn:          r.nullStringToString(dbCorp.NameEn),
 		PostalCode:      r.nullStringToString(dbCorp.PostalCode),
 		Location:        r.nullStringToString(dbCorp.Location),
+		PrefectureCode:  r.nullStringToString(dbCorp.PrefectureCode),
 		Status:          dbCorp.Status,
 
 		// Registration Information

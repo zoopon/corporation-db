@@ -12,6 +12,7 @@ CREATE TABLE corporations (
     name_en VARCHAR(500),                                -- name_en (英語法人名)
     postal_code VARCHAR(10),                             -- postal_code
     location TEXT,                                       -- location (所在地)
+    prefecture_code VARCHAR(2),                          -- prefecture_code (都道府県コード)
     status VARCHAR(100) NOT NULL DEFAULT '01',           -- status (法人状態)
     
     -- Registration Information (登記情報)
@@ -51,6 +52,7 @@ CREATE INDEX idx_corporations_name ON corporations(name);
 CREATE INDEX idx_corporations_kana ON corporations(kana);
 CREATE INDEX idx_corporations_status ON corporations(status);
 CREATE INDEX idx_corporations_location ON corporations(location);
+CREATE INDEX idx_corporations_prefecture_code ON corporations(prefecture_code);
 CREATE INDEX idx_corporations_representative_name ON corporations(representative_name);
 CREATE INDEX idx_corporations_date_of_establishment ON corporations(date_of_establishment);
 CREATE INDEX idx_corporations_update_date ON corporations(update_date);

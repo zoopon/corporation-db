@@ -17,13 +17,14 @@ type Corporation struct {
 	ID int64 `json:"id"`
 
 	// Basic Information (基本情報) - matches gBizINFO API response
-	CorporateNumber string  `json:"corporate_number"`      // corporate_number (法人番号)
-	Name            string  `json:"name"`                  // name (法人名)
-	Kana            *string `json:"kana,omitempty"`        // kana (法人名ふりがな)
-	NameEn          *string `json:"name_en,omitempty"`     // name_en (英語法人名)
-	PostalCode      *string `json:"postal_code,omitempty"` // postal_code (郵便番号)
-	Location        *string `json:"location,omitempty"`    // location (所在地)
-	Status          string  `json:"status"`                // status (法人状態)
+	CorporateNumber string  `json:"corporate_number"`          // corporate_number (法人番号)
+	Name            string  `json:"name"`                      // name (法人名)
+	Kana            *string `json:"kana,omitempty"`            // kana (法人名ふりがな)
+	NameEn          *string `json:"name_en,omitempty"`         // name_en (英語法人名)
+	PostalCode      *string `json:"postal_code,omitempty"`     // postal_code (郵便番号)
+	Location        *string `json:"location,omitempty"`        // location (所在地)
+	PrefectureCode  *string `json:"prefecture_code,omitempty"` // prefecture_code (都道府県コード)
+	Status          string  `json:"status"`                    // status (法人状態)
 
 	// Registration Information (登記情報)
 	CloseDate  *time.Time `json:"close_date,omitempty"`  // close_date (登記記録の閉鎖等年月日)
@@ -64,6 +65,7 @@ type CreateCorporationRequest struct {
 	NameEn                 *string    `json:"name_en,omitempty"`
 	PostalCode             *string    `json:"postal_code,omitempty"`
 	Location               *string    `json:"location,omitempty"`
+	PrefectureCode         *string    `json:"prefecture_code,omitempty"`
 	Status                 string     `json:"status" validate:"required"`
 	CloseDate              *time.Time `json:"close_date,omitempty"`
 	CloseCause             *string    `json:"close_cause,omitempty"`
@@ -88,6 +90,7 @@ type CorporationFilter struct {
 	CorporateNumber *string `json:"corporate_number,omitempty"`
 	Name            *string `json:"name,omitempty"`
 	Prefecture      *string `json:"prefecture,omitempty"`
+	PrefectureCode  *string `json:"prefecture_code,omitempty"`
 	Status          *string `json:"status,omitempty"`
 	CorporateType   *string `json:"corporate_type,omitempty"`
 	Limit           int     `json:"limit"`

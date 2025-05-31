@@ -179,12 +179,12 @@ components:
           type: string
           description: Corporation name
           example: 株式会社サンプル
-        kana:
+        name_kana:
           type: string
           nullable: true
           description: Corporation name in katakana
           example: カブシキガイシャサンプル
-        name_en:
+        english_name:
           type: string
           nullable: true
           description: Corporation name in English
@@ -194,99 +194,84 @@ components:
           nullable: true
           description: Postal code
           example: 100-0001
-        location:
+        address:
           type: string
           nullable: true
-          description: Head office location
+          description: Address
           example: 東京都千代田区千代田1-1
+        prefecture_code:
+          type: string
+          nullable: true
+          description: Prefecture code
+          example: '13'
+        city_code:
+          type: string
+          nullable: true
+          description: City code
+          example: '13101'
+        founding_date:
+          type: string
+          format: date
+          nullable: true
+          description: Founding date
+          example: '2000-01-01'
         status:
           type: string
           description: Corporation status
-          example: '01'
-        close_date:
-          type: string
-          format: date
-          nullable: true
-          description: Registration closure date
-          example: '2023-12-01'
-        close_cause:
+          example: 活動中
+        corporate_type:
           type: string
           nullable: true
-          description: Registration closure reason
-          example: 解散
-        representative_name:
-          type: string
-          nullable: true
-          description: Representative name
-          example: 田中太郎
-        representative_position:
-          type: string
-          nullable: true
-          description: Representative position
-          example: 代表取締役
-        date_of_establishment:
-          type: string
-          format: date
-          nullable: true
-          description: Date of establishment
-          example: '2020-01-01'
-        founding_year:
-          type: integer
-          nullable: true
-          description: Founding year
-          example: 2020
+          description: Corporation type
+          example: 株式会社
         capital_stock:
           type: integer
           format: int64
           nullable: true
-          description: Capital stock
+          description: Capital stock in yen
           example: 10000000
         employee_number:
           type: integer
+          format: int32
           nullable: true
           description: Number of employees
           example: 100
-        company_size_male:
-          type: integer
-          nullable: true
-          description: Company size (male employees)
-          example: 60
-        company_size_female:
-          type: integer
-          nullable: true
-          description: Company size (female employees)
-          example: 40
-        business_items:
+        representative:
           type: string
           nullable: true
-          description: Business items (JSON format)
-          example: '["ソフトウェア開発", "システム運用"]'
-        business_summary:
+          description: Representative name
+          example: 田中太郎
+        business_description:
           type: string
           nullable: true
-          description: Business summary
-          example: ITソリューション事業
-        company_url:
+          description: Business description
+          example: ソフトウェア開発
+        industry:
           type: string
           nullable: true
-          description: Company website URL
+          description: Industry
+          example: 情報通信業
+        website:
+          type: string
+          nullable: true
+          description: Website URL
           example: https://example.com
-        qualification_grade:
+        phone:
           type: string
           nullable: true
-          description: Qualification grade
-          example: A
-        number_of_activity:
+          description: Phone number
+          example: 03-1234-5678
+        email:
           type: string
           nullable: true
-          description: Number of activity
-          example: '1'
-        update_date:
+          description: Email address
+          example: info@example.com
+        last_updated:
           type: string
-          format: date
+          format: date-time
           nullable: true
-          description: Last updated date from gBizINFO
-          example: '2023-12-01'
+          description: Last updated time from gBizINFO
+          example: '2023-12-01T09:00:00Z'
         created_at:
           type: string
           format: date-time

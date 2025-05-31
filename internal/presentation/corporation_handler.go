@@ -38,6 +38,7 @@ func (h *CorporationHandler) GetCorporations(w http.ResponseWriter, r *http.Requ
 		CorporateNumber: params.CorporateNumber,
 		Name:            params.Name,
 		Prefecture:      params.Prefecture,
+		PrefectureCode:  params.PrefectureCode,
 		Limit:           limit,
 		Offset:          offset,
 	}
@@ -104,6 +105,9 @@ func convertCorporationToAPI(corp *domain.Corporation) api.Corporation {
 	}
 	if corp.Location != nil {
 		apiCorp.Location = corp.Location
+	}
+	if corp.PrefectureCode != nil {
+		apiCorp.PrefectureCode = corp.PrefectureCode
 	}
 
 	// Registration Information

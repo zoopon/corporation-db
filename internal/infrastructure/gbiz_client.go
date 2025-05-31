@@ -16,6 +16,115 @@ import (
 	"corporation-db/internal/domain"
 )
 
+// prefectureCodeMap maps prefecture names to JIS X 0401 codes
+var prefectureCodeMap = map[string]string{
+	"北海道": "01",
+	"青森県": "02", "青森": "02",
+	"岩手県": "03", "岩手": "03",
+	"宮城県": "04", "宮城": "04",
+	"秋田県": "05", "秋田": "05",
+	"山形県": "06", "山形": "06",
+	"福島県": "07", "福島": "07",
+	"茨城県": "08", "茨城": "08",
+	"栃木県": "09", "栃木": "09",
+	"群馬県": "10", "群馬": "10",
+	"埼玉県": "11", "埼玉": "11",
+	"千葉県": "12", "千葉": "12",
+	"東京都": "13", "東京": "13",
+	"神奈川県": "14", "神奈川": "14",
+	"新潟県": "15", "新潟": "15",
+	"富山県": "16", "富山": "16",
+	"石川県": "17", "石川": "17",
+	"福井県": "18", "福井": "18",
+	"山梨県": "19", "山梨": "19",
+	"長野県": "20", "長野": "20",
+	"岐阜県": "21", "岐阜": "21",
+	"静岡県": "22", "静岡": "22",
+	"愛知県": "23", "愛知": "23",
+	"三重県": "24", "三重": "24",
+	"滋賀県": "25", "滋賀": "25",
+	"京都府": "26", "京都": "26",
+	"大阪府": "27", "大阪": "27",
+	"兵庫県": "28", "兵庫": "28",
+	"奈良県": "29", "奈良": "29",
+	"和歌山県": "30", "和歌山": "30",
+	"鳥取県": "31", "鳥取": "31",
+	"島根県": "32", "島根": "32",
+	"岡山県": "33", "岡山": "33",
+	"広島県": "34", "広島": "34",
+	"山口県": "35", "山口": "35",
+	"徳島県": "36", "徳島": "36",
+	"香川県": "37", "香川": "37",
+	"愛媛県": "38", "愛媛": "38",
+	"高知県": "39", "高知": "39",
+	"福岡県": "40", "福岡": "40",
+	"佐賀県": "41", "佐賀": "41",
+	"長崎県": "42", "長崎": "42",
+	"熊本県": "43", "熊本": "43",
+	"大分県": "44", "大分": "44",
+	"宮崎県": "45", "宮崎": "45",
+	"鹿児島県": "46", "鹿児島": "46",
+	"沖縄県": "47", "沖縄": "47",
+}
+
+// cityCodeMap maps major city names to prefecture codes
+var cityCodeMap = map[string]string{
+	"札幌市":   "01", // 北海道
+	"青森市":   "02", // 青森県
+	"盛岡市":   "03", // 岩手県
+	"仙台市":   "04", // 宮城県
+	"秋田市":   "05", // 秋田県
+	"山形市":   "06", // 山形県
+	"福島市":   "07", // 福島県
+	"水戸市":   "08", // 茨城県
+	"宇都宮市":  "09", // 栃木県
+	"前橋市":   "10", // 群馬県
+	"さいたま市": "11", // 埼玉県
+	"千葉市":   "12", // 千葉県
+	"新宿区":   "13", // 東京都
+	"渋谷区":   "13", // 東京都
+	"港区":    "13", // 東京都
+	"中央区":   "13", // 東京都 (note: 中央区 exists in multiple prefectures, Tokyo is most common)
+	"横浜市":   "14", // 神奈川県
+	"川崎市":   "14", // 神奈川県
+	"新潟市":   "15", // 新潟県
+	"富山市":   "16", // 富山県
+	"金沢市":   "17", // 石川県
+	"福井市":   "18", // 福井県
+	"甲府市":   "19", // 山梨県
+	"長野市":   "20", // 長野県
+	"岐阜市":   "21", // 岐阜県
+	"静岡市":   "22", // 静岡県
+	"浜松市":   "22", // 静岡県
+	"名古屋市":  "23", // 愛知県
+	"津市":    "24", // 三重県
+	"大津市":   "25", // 滋賀県
+	"京都市":   "26", // 京都府
+	"大阪市":   "27", // 大阪府
+	"堺市":    "27", // 大阪府
+	"神戸市":   "28", // 兵庫県
+	"奈良市":   "29", // 奈良県
+	"和歌山市":  "30", // 和歌山県
+	"鳥取市":   "31", // 鳥取県
+	"松江市":   "32", // 島根県
+	"岡山市":   "33", // 岡山県
+	"広島市":   "34", // 広島県
+	"山口市":   "35", // 山口県
+	"徳島市":   "36", // 徳島県
+	"高松市":   "37", // 香川県
+	"松山市":   "38", // 愛媛県
+	"高知市":   "39", // 高知県
+	"福岡市":   "40", // 福岡県
+	"北九州市":  "40", // 福岡県
+	"佐賀市":   "41", // 佐賀県
+	"長崎市":   "42", // 長崎県
+	"熊本市":   "43", // 熊本県
+	"大分市":   "44", // 大分県
+	"宮崎市":   "45", // 宮崎県
+	"鹿児島市":  "46", // 鹿児島県
+	"那覇市":   "47", // 沖縄県
+}
+
 // GBizClient handles communication with gBizINFO API
 type GBizClient struct {
 	httpClient *http.Client
@@ -39,7 +148,7 @@ func (c *GBizClient) DownloadBasicInfoCSV(ctx context.Context) (string, error) {
 
 	// Prepare form data for POST request using actual gBizINFO parameters
 	formData := "downfile=7&downtype=zip&downenc=UTF-8"
-	
+
 	req, err := http.NewRequestWithContext(ctx, "POST", url, strings.NewReader(formData))
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
@@ -156,10 +265,10 @@ func (c *GBizClient) ExtractAndParseCSV(zipPath string) ([]*domain.CreateCorpora
 // parseCSV parses CSV content and converts to Corporation entities
 func (c *GBizClient) parseCSV(reader io.Reader) ([]*domain.CreateCorporationRequest, error) {
 	csvReader := csv.NewReader(reader)
-	
+
 	// Configure CSV reader for gBizINFO format
-	csvReader.LazyQuotes = true     // Allow lazy quotes for malformed CSV
-	csvReader.FieldsPerRecord = -1  // Allow variable number of fields per record
+	csvReader.LazyQuotes = true    // Allow lazy quotes for malformed CSV
+	csvReader.FieldsPerRecord = -1 // Allow variable number of fields per record
 
 	// Read header
 	headers, err := csvReader.Read()
@@ -260,7 +369,7 @@ func (c *GBizClient) parseCSVRecord(headers []string, record []string) (*domain.
 	}
 
 	// Map CSV fields to gBizINFO API structure
-	
+
 	// Basic Information
 	if val, exists := fieldMap["法人名ふりがな"]; exists && val != "" {
 		corp.Kana = &val
@@ -284,6 +393,14 @@ func (c *GBizClient) parseCSVRecord(headers []string, record []string) (*domain.
 	// Also try alternative field name used in some CSV files
 	if val, exists := fieldMap["本店所在地"]; exists && val != "" {
 		corp.Location = &val
+	}
+
+	// Extract prefecture code from location
+	if corp.Location != nil {
+		prefCode := extractPrefectureCode(*corp.Location)
+		if prefCode != "" {
+			corp.PrefectureCode = &prefCode
+		}
 	}
 
 	if val, exists := fieldMap["ステータス"]; exists && val != "" {
@@ -459,4 +576,53 @@ func (c *GBizClient) DisplayCSVHeaders(zipPath string) error {
 	}
 
 	return nil
+}
+
+// extractPrefectureCode extracts prefecture code from location string
+func extractPrefectureCode(location string) string {
+	if location == "" {
+		return ""
+	}
+
+	// Match prefecture names (北海道、〜県、〜都、〜府) from the beginning of the location string
+	for prefName, code := range prefectureCodeMap {
+		if strings.HasPrefix(location, prefName) {
+			return code
+		}
+	}
+
+	// If no prefecture match found, try matching major cities
+	for cityName, code := range cityCodeMap {
+		if strings.HasPrefix(location, cityName) {
+			return code
+		}
+	}
+
+	return "" // No prefecture or city match found
+}
+
+// ImportFromCSVFile imports corporations from a CSV file directly
+func (c *GBizClient) ImportFromCSVFile(ctx context.Context, filePath string) ([]*domain.CreateCorporationRequest, error) {
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("file does not exist: %s", filePath)
+	}
+
+	// Open CSV file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open CSV file: %w", err)
+	}
+	defer file.Close()
+
+	log.Printf("Starting CSV import from file: %s", filePath)
+
+	// Parse CSV
+	corporations, err := c.parseCSV(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse CSV: %w", err)
+	}
+
+	log.Printf("Successfully imported %d corporations from CSV file", len(corporations))
+	return corporations, nil
 }

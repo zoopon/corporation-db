@@ -2,7 +2,7 @@
 
 -- name: GetCorporations :many
 SELECT id, corporate_number, name, kana, name_en, postal_code, location, 
-       status, close_date, close_cause, representative_name, representative_position,
+       prefecture_code, status, close_date, close_cause, representative_name, representative_position,
        date_of_establishment, founding_year, capital_stock, employee_number,
        company_size_male, company_size_female, business_items, business_summary,
        company_url, qualification_grade, number_of_activity, update_date,
@@ -12,7 +12,7 @@ ORDER BY created_at DESC;
 
 -- name: GetCorporationByID :one
 SELECT id, corporate_number, name, kana, name_en, postal_code, location, 
-       status, close_date, close_cause, representative_name, representative_position,
+       prefecture_code, status, close_date, close_cause, representative_name, representative_position,
        date_of_establishment, founding_year, capital_stock, employee_number,
        company_size_male, company_size_female, business_items, business_summary,
        company_url, qualification_grade, number_of_activity, update_date,
@@ -22,7 +22,7 @@ WHERE id = $1 LIMIT 1;
 
 -- name: GetCorporationByCorporateNumber :one
 SELECT id, corporate_number, name, kana, name_en, postal_code, location, 
-       status, close_date, close_cause, representative_name, representative_position,
+       prefecture_code, status, close_date, close_cause, representative_name, representative_position,
        date_of_establishment, founding_year, capital_stock, employee_number,
        company_size_male, company_size_female, business_items, business_summary,
        company_url, qualification_grade, number_of_activity, update_date,
@@ -32,7 +32,7 @@ WHERE corporate_number = $1 LIMIT 1;
 
 -- name: GetCorporationsWithFilter :many
 SELECT id, corporate_number, name, kana, name_en, postal_code, location, 
-       status, close_date, close_cause, representative_name, representative_position,
+       prefecture_code, status, close_date, close_cause, representative_name, representative_position,
        date_of_establishment, founding_year, capital_stock, employee_number,
        company_size_male, company_size_female, business_items, business_summary,
        company_url, qualification_grade, number_of_activity, update_date,
@@ -42,8 +42,9 @@ WHERE ($1 = '' OR corporate_number = $1)
   AND ($2 = '' OR name ILIKE '%' || $2 || '%')
   AND ($3 = '' OR location ILIKE '%' || $3 || '%')
   AND ($4 = '' OR status = $4)
+  AND ($5 = '' OR prefecture_code = $5)
 ORDER BY created_at DESC
-LIMIT $5 OFFSET $6;
+LIMIT $6 OFFSET $7;
 
 -- name: CountCorporationsWithFilter :one
 SELECT COUNT(*) 
@@ -51,20 +52,21 @@ FROM corporations
 WHERE ($1 = '' OR corporate_number = $1)
   AND ($2 = '' OR name ILIKE '%' || $2 || '%')
   AND ($3 = '' OR location ILIKE '%' || $3 || '%')
-  AND ($4 = '' OR status = $4);
+  AND ($4 = '' OR status = $4)
+  AND ($5 = '' OR prefecture_code = $5);
 
 -- name: CreateCorporation :one
 INSERT INTO corporations (
-    corporate_number, name, kana, name_en, postal_code, location,
+    corporate_number, name, kana, name_en, postal_code, location, prefecture_code,
     status, close_date, close_cause, representative_name, representative_position,
     date_of_establishment, founding_year, capital_stock, employee_number,
     company_size_male, company_size_female, business_items, business_summary,
     company_url, qualification_grade, number_of_activity, update_date
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
 )
 RETURNING id, corporate_number, name, kana, name_en, postal_code, location, 
-          status, close_date, close_cause, representative_name, representative_position,
+          prefecture_code, status, close_date, close_cause, representative_name, representative_position,
           date_of_establishment, founding_year, capital_stock, employee_number,
           company_size_male, company_size_female, business_items, business_summary,
           company_url, qualification_grade, number_of_activity, update_date,
@@ -73,15 +75,15 @@ RETURNING id, corporate_number, name, kana, name_en, postal_code, location,
 -- name: UpdateCorporation :one
 UPDATE corporations
 SET name = $2, kana = $3, name_en = $4, postal_code = $5, location = $6,
-    status = $7, close_date = $8, close_cause = $9, representative_name = $10,
-    representative_position = $11, date_of_establishment = $12, founding_year = $13,
-    capital_stock = $14, employee_number = $15, company_size_male = $16,
-    company_size_female = $17, business_items = $18, business_summary = $19,
-    company_url = $20, qualification_grade = $21, number_of_activity = $22,
-    update_date = $23, updated_at = NOW()
+    prefecture_code = $7, status = $8, close_date = $9, close_cause = $10, representative_name = $11,
+    representative_position = $12, date_of_establishment = $13, founding_year = $14,
+    capital_stock = $15, employee_number = $16, company_size_male = $17,
+    company_size_female = $18, business_items = $19, business_summary = $20,
+    company_url = $21, qualification_grade = $22, number_of_activity = $23,
+    update_date = $24, updated_at = NOW()
 WHERE id = $1
 RETURNING id, corporate_number, name, kana, name_en, postal_code, location, 
-          status, close_date, close_cause, representative_name, representative_position,
+          prefecture_code, status, close_date, close_cause, representative_name, representative_position,
           date_of_establishment, founding_year, capital_stock, employee_number,
           company_size_male, company_size_female, business_items, business_summary,
           company_url, qualification_grade, number_of_activity, update_date,
@@ -97,13 +99,13 @@ WHERE corporate_number = $1;
 
 -- name: UpsertCorporation :one
 INSERT INTO corporations (
-    corporate_number, name, kana, name_en, postal_code, location,
+    corporate_number, name, kana, name_en, postal_code, location, prefecture_code,
     status, close_date, close_cause, representative_name, representative_position,
     date_of_establishment, founding_year, capital_stock, employee_number,
     company_size_male, company_size_female, business_items, business_summary,
     company_url, qualification_grade, number_of_activity, update_date
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
 )
 ON CONFLICT (corporate_number)
 DO UPDATE SET
@@ -112,6 +114,7 @@ DO UPDATE SET
     name_en = EXCLUDED.name_en,
     postal_code = EXCLUDED.postal_code,
     location = EXCLUDED.location,
+    prefecture_code = EXCLUDED.prefecture_code,
     status = EXCLUDED.status,
     close_date = EXCLUDED.close_date,
     close_cause = EXCLUDED.close_cause,
@@ -131,7 +134,7 @@ DO UPDATE SET
     update_date = EXCLUDED.update_date,
     updated_at = NOW()
 RETURNING id, corporate_number, name, kana, name_en, postal_code, location, 
-          status, close_date, close_cause, representative_name, representative_position,
+          prefecture_code, status, close_date, close_cause, representative_name, representative_position,
           date_of_establishment, founding_year, capital_stock, employee_number,
           company_size_male, company_size_female, business_items, business_summary,
           company_url, qualification_grade, number_of_activity, update_date,

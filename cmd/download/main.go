@@ -95,7 +95,7 @@ Examples:
   ./download -output ./gbiz_data.zip
 
   # Download to specific directory
-  ./download -output /data/gbiz_$(date +%Y%m%d).zip
+  ./download -output /data/gbiz_$(date +%%Y%%m%%d).zip
 
 The tool will:
 1. Download the latest basic corporation information ZIP file from gBizINFO

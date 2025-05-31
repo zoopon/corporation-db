@@ -34,6 +34,12 @@ properties:
     nullable: true
     description: Head office location
     example: "東京都千代田区千代田1-1"
+  prefecture_code:
+    type: string
+    nullable: true
+    description: Prefecture code (JIS X 0401)
+    pattern: '^[0-9]{2}$'
+    example: "13"
   status:
     type: string
     description: Corporation status

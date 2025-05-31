@@ -67,6 +67,324 @@ docker-compose up --build
 
 アプリケーションは http://localhost:8080 でアクセス可能になります。
 
+## 📋 Docker-Compose 実行手順書
+
+### 🚀 gBizINFO データ取得からAPI起動までの完全手順
+
+Docker-Composeを使用して、データ取得・インポート・アプリケーション起動を順次実行する手順です。
+
+#### 📚 前提条件
+- Docker & Docker Compose がインストール済み
+- プロジェクトのルートディレクトリにいること
+
+---
+
+### 🗂️ ステップ 1: データベース起動
+
+```bash
+# データベースを起動
+docker-compose up -d db
+
+# データベースの起動確認（約10-15秒待機）
+docker-compose logs db
+
+# データベース接続確認
+docker-compose exec db psql -U postgres -d corporation_db -c "\dt"
+```
+
+**確認ポイント:**
+- ✅ PostgreSQLコンテナが起動している
+- ✅ データベースに接続できる
+- ✅ テーブルが作成されている
+
+---
+
+### 📥 ステップ 2: データ取得バッチ実行
+
+```bash
+# ダウンロード用コンテナでデータ取得（推奨）
+docker-compose run --rm download \
+  -output /data/gbiz_$(date +%Y%m%d_%H%M%S).zip
+
+# または、固定ファイル名でダウンロード
+docker-compose run --rm download \
+  -output /data/gbiz_latest.zip
+```
+
+**確認ポイント:**
+- ✅ ZIPファイルが `data/` ディレクトリに保存される
+- ✅ ファイルサイズが適切（通常数百MB〜数GB）
+- ✅ CSV headers が表示される
+
+---
+
+### 📊 ステップ 3: データインポートバッチ実行
+
+```bash
+# ダウンロードしたZIPファイルをインポート
+docker-compose run --rm import \
+  -zip-file /data/gbiz_latest.zip
+
+# または、特定のタイムスタンプ付きファイルをインポート
+docker-compose run --rm import \
+  -zip-file /data/gbiz_20241231_120000.zip
+
+# dry-runでインポート内容を事前確認（推奨）
+docker-compose run --rm import \
+  -zip-file /data/gbiz_latest.zip \
+  -dry-run
+```
+
+**確認ポイント:**
+- ✅ CSVファイルが正常に解析される
+- ✅ 都道府県コードが自動抽出される
+- ✅ データベースにレコードが保存される
+
+---
+
+### 🌐 ステップ 4: アプリケーション起動
+
+```bash
+# APIサーバーを起動
+docker-compose up -d app
+
+# ログ確認
+docker-compose logs -f app
+
+# ヘルスチェック
+curl http://localhost:8080/health
+```
+
+**確認ポイント:**
+- ✅ APIサーバーがポート8080で起動
+- ✅ ヘルスチェックが `{"status":"ok"}` を返す
+- ✅ データベース接続が正常
+
+---
+
+### 🔍 ステップ 5: 動作確認
+
+#### API エンドポイントテスト
+
+```bash
+# 全法人情報取得
+curl "http://localhost:8080/corporations?limit=5"
+
+# 都道府県フィルタリング（東京都）
+curl "http://localhost:8080/corporations?prefecture_code=13&limit=5"
+
+# 都道府県フィルタリング（大阪府）
+curl "http://localhost:8080/corporations?prefecture_code=27&limit=5"
+
+# 法人名検索 + 都道府県フィルタ
+curl "http://localhost:8080/corporations?name=株式会社&prefecture_code=13&limit=5"
+
+# 特定法人番号で詳細取得
+curl "http://localhost:8080/corporations/1234567890123"
+```
+
+---
+
+### 📊 全サービス管理コマンド
+
+#### 全サービス起動
+```bash
+# 全サービス起動（バックグラウンド）
+docker-compose up -d
+
+# 全サービス起動（フォアグラウンド）
+docker-compose up
+```
+
+#### サービス状態確認
+```bash
+# サービス状態確認
+docker-compose ps
+
+# ログ確認
+docker-compose logs
+
+# 特定サービスのログ確認
+docker-compose logs app
+docker-compose logs db
+```
+
+#### サービス停止・クリーンアップ
+```bash
+# 全サービス停止
+docker-compose down
+
+# データ保持して停止
+docker-compose down
+
+# データも削除して停止（注意！）
+docker-compose down -v
+
+# 不要なイメージも削除
+docker-compose down --rmi all
+```
+
+---
+
+### 🚨 トラブルシューティング
+
+#### 🗃️ データベースリセット
+
+データベースを完全にリセットする場合の手順：
+
+```bash
+# 方法1: ボリュームを削除してデータベースを完全リセット
+docker-compose down -v
+docker-compose up -d db
+
+# 方法2: 既存のデータベースコンテナを削除して再構築
+docker-compose down
+docker volume rm corporatioin-db_postgres_data
+docker-compose up -d db
+
+# 方法3: テーブルのデータのみを削除（テーブル構造は保持）
+docker-compose exec db psql -U postgres -d corporation_db -c "TRUNCATE TABLE corporations, users RESTART IDENTITY CASCADE;"
+
+# 方法4: 特定のテーブルのみリセット（corporationsテーブルのみ）
+docker-compose exec db psql -U postgres -d corporation_db -c "TRUNCATE TABLE corporations RESTART IDENTITY CASCADE;"
+
+# リセット後の確認
+docker-compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM corporations;"
+docker-compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM users;"
+```
+
+**⚠️ 注意事項:**
+- `docker-compose down -v` は **すべてのデータが永久に削除** されます
+- `TRUNCATE` コマンドは **データのみ削除**、テーブル構造は保持されます
+- 本番環境では絶対に実行しないでください
+
+#### 📊 データベース状態確認
+
+```bash
+# データベース内のテーブル一覧
+docker-compose exec db psql -U postgres -d corporation_db -c "\dt"
+
+# 各テーブルのレコード数確認
+docker-compose exec db psql -U postgres -d corporation_db -c "
+  SELECT 'corporations' as table_name, COUNT(*) as record_count FROM corporations
+  UNION ALL
+  SELECT 'users' as table_name, COUNT(*) as record_count FROM users;"
+
+# 都道府県別の法人数統計
+docker-compose exec db psql -U postgres -d corporation_db -c "
+  SELECT prefecture_code, COUNT(*) as corporation_count 
+  FROM corporations 
+  WHERE prefecture_code IS NOT NULL 
+  GROUP BY prefecture_code 
+  ORDER BY prefecture_code;"
+
+# データベースサイズ確認
+docker-compose exec db psql -U postgres -d corporation_db -c "
+  SELECT pg_size_pretty(pg_database_size('corporation_db')) as database_size;"
+```
+
+#### データベース接続エラー
+```bash
+# データベースコンテナの状態確認
+docker-compose logs db
+
+# データベース再起動
+docker-compose restart db
+
+# データベース接続確認
+docker-compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM corporations;"
+```
+
+#### インポートエラー
+```bash
+# インポートログ確認
+docker-compose logs import
+
+# dry-runで事前確認
+docker-compose run --rm import -zip-file /data/gbiz_latest.zip -dry-run
+
+# データベースの現在の状態確認
+docker-compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM corporations WHERE prefecture_code IS NOT NULL;"
+```
+
+#### APIサーバーエラー
+```bash
+# APIサーバーログ確認
+docker-compose logs app
+
+# ヘルスチェック
+curl http://localhost:8080/health
+
+# APIサーバー再起動
+docker-compose restart app
+```
+
+---
+
+### 📝 定期実行用自動化スクリプト
+
+#### データ更新スクリプト例
+```bash
+#!/bin/bash
+# update_gbiz_data.sh
+
+set -e
+
+# 現在日時のファイル名
+FILENAME="gbiz_$(date +%Y%m%d_%H%M%S).zip"
+
+echo "Starting gBizINFO data update..."
+
+# 1. データベース起動確認
+docker-compose up -d db
+sleep 10
+
+# 2. 新しいデータをダウンロード
+echo "Downloading latest data..."
+docker-compose run --rm download -output "/data/$FILENAME"
+
+# 3. データをインポート
+echo "Importing data..."
+docker-compose run --rm import -zip-file "/data/$FILENAME"
+
+# 4. APIサーバー起動
+echo "Starting API server..."
+docker-compose up -d app
+
+# 5. 動作確認
+sleep 5
+curl -f http://localhost:8080/health
+
+echo "Data update completed successfully!"
+```
+
+#### 使用方法
+```bash
+# スクリプトに実行権限を付与
+chmod +x update_gbiz_data.sh
+
+# 実行
+./update_gbiz_data.sh
+```
+
+---
+
+### 💾 データ永続化について
+
+現在の設定では、PostgreSQLデータベースのデータは **永続化されています**。
+
+- **ボリューム**: `postgres_data` 名前付きボリュームでデータ保存
+- **再起動後も保持**: Docker/Docker Composeを再起動してもデータは削除されません
+- **完全削除**: `docker-compose down -v` でボリュームも削除される
+
+```bash
+# データ保持して再起動
+docker-compose down && docker-compose up -d
+
+# データも含めて完全削除（注意！）
+docker-compose down -v
+```
+
 ## 開発状況
 
 ### ✅ 完了済み

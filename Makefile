@@ -1,4 +1,4 @@
-.PHONY: help docker-run docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all
+.PHONY: help docker-run docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all db-reset db-reset-data db-status db-connect
 
 # デフォルトターゲット
 help:
@@ -23,6 +23,12 @@ help:
 	@echo "  schema-dry-run - Dry run schema changes"
 	@echo "  schema-export  - Export current database schema"
 	@echo "  schema-check   - Check database connection and status"
+	@echo ""
+	@echo "Database operations:"
+	@echo "  db-reset       - Reset database (remove all data and volumes)"
+	@echo "  db-reset-data  - Reset only data (keep table structure)"
+	@echo "  db-status      - Show database status and record counts"
+	@echo "  db-connect     - Connect to database shell"
 	@echo ""
 	@echo "Documentation:"
 	@echo "  docs-serve     - Serve API documentation locally"
@@ -159,3 +165,49 @@ import-data: import-build
 	@echo "Importing data from ZIP file..."
 	@read -p "Enter ZIP file path: " zipfile; \
 	./bin/import -input "$$zipfile"
+
+# Database operations
+db-reset:
+	@echo "⚠️  WARNING: This will permanently delete ALL database data!"
+	@echo "This action cannot be undone."
+	@read -p "Are you sure you want to reset the database? (yes/NO): " confirm; \
+	if [ "$$confirm" = "yes" ]; then \
+		echo "Stopping containers and removing volumes..."; \
+		docker-compose down -v; \
+		echo "Starting fresh database..."; \
+		docker-compose up -d db; \
+		echo "Waiting for database to be ready..."; \
+		sleep 10; \
+		echo "Database reset completed successfully!"; \
+	else \
+		echo "Database reset cancelled."; \
+	fi
+
+db-reset-data:
+	@echo "⚠️  WARNING: This will delete all data from corporations and users tables!"
+	@echo "Table structure will be preserved."
+	@read -p "Are you sure you want to reset table data? (yes/NO): " confirm; \
+	if [ "$$confirm" = "yes" ]; then \
+		echo "Truncating tables..."; \
+		docker-compose exec db psql -U postgres -d corporation_db -c "TRUNCATE TABLE corporations, users RESTART IDENTITY CASCADE;"; \
+		echo "Data reset completed successfully!"; \
+		make db-status; \
+	else \
+		echo "Data reset cancelled."; \
+	fi
+
+db-status:
+	@echo "=== Database Status ==="
+	@echo "Tables:"
+	@docker-compose exec db psql -U postgres -d corporation_db -c "\dt"
+	@echo ""
+	@echo "Record counts:"
+	@docker-compose exec db psql -U postgres -d corporation_db -c "SELECT 'corporations' as table_name, COUNT(*) as record_count FROM corporations UNION ALL SELECT 'users' as table_name, COUNT(*) as record_count FROM users;"
+	@echo ""
+	@echo "Database size:"
+	@docker-compose exec db psql -U postgres -d corporation_db -c "SELECT pg_size_pretty(pg_database_size('corporation_db')) as database_size;"
+
+db-connect:
+	@echo "Connecting to database shell..."
+	@echo "Use \\q to exit the database shell"
+	docker-compose exec db psql -U postgres -d corporation_db

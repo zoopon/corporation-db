@@ -92,58 +92,83 @@ func convertCorporationToAPI(corp *domain.Corporation) api.Corporation {
 		UpdatedAt:       corp.UpdatedAt,
 	}
 
-	if corp.NameKana != nil {
-		apiCorp.NameKana = corp.NameKana
+	// Basic Information
+	if corp.Kana != nil {
+		apiCorp.Kana = corp.Kana
 	}
-	if corp.EnglishName != nil {
-		apiCorp.EnglishName = corp.EnglishName
+	if corp.NameEn != nil {
+		apiCorp.NameEn = corp.NameEn
 	}
 	if corp.PostalCode != nil {
 		apiCorp.PostalCode = corp.PostalCode
 	}
-	if corp.Address != nil {
-		apiCorp.Address = corp.Address
+	if corp.Location != nil {
+		apiCorp.Location = corp.Location
 	}
-	if corp.PrefectureCode != nil {
-		apiCorp.PrefectureCode = corp.PrefectureCode
+
+	// Registration Information
+	if corp.CloseDate != nil {
+		date := openapi_types.Date{Time: *corp.CloseDate}
+		apiCorp.CloseDate = &date
 	}
-	if corp.CityCode != nil {
-		apiCorp.CityCode = corp.CityCode
+	if corp.CloseCause != nil {
+		apiCorp.CloseCause = corp.CloseCause
 	}
-	if corp.Phone != nil {
-		apiCorp.Phone = corp.Phone
+
+	// Representative Information
+	if corp.RepresentativeName != nil {
+		apiCorp.RepresentativeName = corp.RepresentativeName
 	}
-	if corp.Email != nil {
-		apiCorp.Email = corp.Email
+	if corp.RepresentativePosition != nil {
+		apiCorp.RepresentativePosition = corp.RepresentativePosition
 	}
-	if corp.Website != nil {
-		apiCorp.Website = corp.Website
+
+	// Company Details
+	if corp.DateOfEstablishment != nil {
+		date := openapi_types.Date{Time: *corp.DateOfEstablishment}
+		apiCorp.DateOfEstablishment = &date
 	}
-	if corp.FoundingDate != nil {
-		// Convert time.Time to openapi_types.Date
-		date := openapi_types.Date{Time: *corp.FoundingDate}
-		apiCorp.FoundingDate = &date
+	if corp.FoundingYear != nil {
+		foundingYear := int(*corp.FoundingYear)
+		apiCorp.FoundingYear = &foundingYear
 	}
 	if corp.CapitalStock != nil {
 		apiCorp.CapitalStock = corp.CapitalStock
 	}
 	if corp.EmployeeNumber != nil {
-		apiCorp.EmployeeNumber = corp.EmployeeNumber
+		employeeNumber := int(*corp.EmployeeNumber)
+		apiCorp.EmployeeNumber = &employeeNumber
 	}
-	if corp.BusinessDescription != nil {
-		apiCorp.BusinessDescription = corp.BusinessDescription
+	if corp.CompanySizeMale != nil {
+		companySizeMale := int(*corp.CompanySizeMale)
+		apiCorp.CompanySizeMale = &companySizeMale
 	}
-	if corp.CorporateType != nil {
-		apiCorp.CorporateType = corp.CorporateType
+	if corp.CompanySizeFemale != nil {
+		companySizeFemale := int(*corp.CompanySizeFemale)
+		apiCorp.CompanySizeFemale = &companySizeFemale
 	}
-	if corp.Representative != nil {
-		apiCorp.Representative = corp.Representative
+
+	// Business Information
+	if corp.BusinessItems != nil {
+		apiCorp.BusinessItems = corp.BusinessItems
 	}
-	if corp.Industry != nil {
-		apiCorp.Industry = corp.Industry
+	if corp.BusinessSummary != nil {
+		apiCorp.BusinessSummary = corp.BusinessSummary
 	}
-	if corp.LastUpdated != nil {
-		apiCorp.LastUpdated = corp.LastUpdated
+	if corp.CompanyUrl != nil {
+		apiCorp.CompanyUrl = corp.CompanyUrl
+	}
+	if corp.QualificationGrade != nil {
+		apiCorp.QualificationGrade = corp.QualificationGrade
+	}
+	if corp.NumberOfActivity != nil {
+		apiCorp.NumberOfActivity = corp.NumberOfActivity
+	}
+
+	// gBizINFO Metadata
+	if corp.UpdateDate != nil {
+		date := openapi_types.Date{Time: *corp.UpdateDate}
+		apiCorp.UpdateDate = &date
 	}
 
 	return apiCorp

@@ -34,8 +34,8 @@ func main() {
 		dbPassword = flag.String("db-password", getEnv("DB_PASSWORD", defaultDBPassword), "Database password")
 		dbName     = flag.String("db-name", getEnv("DB_NAME", defaultDBName), "Database name")
 		sslMode    = flag.String("ssl-mode", getEnv("DB_SSL_MODE", "disable"), "Database SSL mode")
-		dryRun     = flag.Bool("dry-run", false, "Perform a dry run without actually importing data")
-		testCSV    = flag.String("test-csv", "", "Use a local test CSV file instead of downloading from gBizINFO")
+		inputPath  = flag.String("input", "", "Input ZIP file path (required)")
+		dryRun     = flag.Bool("dry-run", false, "Perform a dry run without importing data")
 		help       = flag.Bool("help", false, "Show help message")
 	)
 	flag.Parse()
@@ -45,7 +45,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	log.Println("Starting gBizINFO Corporation Data Batch Import")
+	if *inputPath == "" {
+		fmt.Println("Error: -input flag is required")
+		showHelp()
+		os.Exit(1)
+	}
+
+	log.Println("Starting gBizINFO Data Import")
+	log.Printf("Input file: %s", *inputPath)
 	log.Printf("Target Database: %s:%s/%s", *dbHost, *dbPort, *dbName)
 
 	if *dryRun {
@@ -87,14 +94,10 @@ func main() {
 	// Start import process with progress tracking
 	startTime := time.Now()
 
-	if *testCSV != "" {
-		log.Printf("Using test CSV file: %s", *testCSV)
-		err = corporationUsecase.ImportFromTestCSV(ctx, *testCSV)
-	} else {
-		err = corporationUsecase.ImportFromGBizINFOWithProgress(ctx, func(stage string, progress float64) {
-			log.Printf("Progress: %s (%.1f%%)", stage, progress)
-		})
-	}
+	log.Printf("Importing from ZIP file: %s", *inputPath)
+	err = corporationUsecase.ImportFromZIPFile(ctx, *inputPath, func(stage string, progress float64) {
+		log.Printf("Progress: %s (%.1f%%)", stage, progress)
+	})
 
 	if err != nil {
 		log.Fatalf("Import failed: %v", err)
@@ -116,7 +119,7 @@ func main() {
 		}
 	}
 
-	log.Println("Batch import completed successfully")
+	log.Println("Import completed successfully")
 }
 
 func connectToDatabase(host, port, user, password, dbname, sslmode string) (*sql.DB, error) {
@@ -153,15 +156,16 @@ func getEnv(key, defaultValue string) string {
 }
 
 func showHelp() {
-	fmt.Println(`gBizINFO Corporation Data Batch Import
+	fmt.Println(`gBizINFO Data Import Tool
 
-This tool downloads and imports basic corporation information from gBizINFO API
+This tool imports basic corporation information from a gBizINFO ZIP file
 into the local PostgreSQL database.
 
 Usage:
-  batch [options]
+  import -input <path> [options]
 
 Options:
+  -input string        Input ZIP file path (required)
   -db-host string      Database host (default: localhost, env: DB_HOST)
   -db-port string      Database port (default: 5432, env: DB_PORT)
   -db-user string      Database user (default: postgres, env: DB_USER)
@@ -169,7 +173,6 @@ Options:
   -db-name string      Database name (default: corporation_db, env: DB_NAME)
   -ssl-mode string     Database SSL mode (default: disable, env: DB_SSL_MODE)
   -dry-run             Perform a dry run without importing data
-  -test-csv string     Use a local test CSV file instead of downloading from gBizINFO
   -help                Show this help message
 
 Environment Variables:
@@ -181,28 +184,23 @@ Environment Variables:
   DB_SSL_MODE          Database SSL mode
 
 Examples:
-  # Basic usage with default settings
-  ./batch
+  # Basic import
+  ./import -input ./gbiz_data.zip
+
+  # With custom database settings
+  ./import -input ./gbiz_data.zip -db-host mydb.com -db-user admin
 
   # Using environment variables
-  DB_HOST=production.db.com DB_USER=admin ./batch
+  DB_HOST=production.db.com DB_USER=admin ./import -input ./gbiz_data.zip
 
   # Dry run to test configuration
-  ./batch -dry-run
-
-  # Custom database connection
-  ./batch -db-host mydb.com -db-port 5433 -db-user admin
-
-  # Test with local CSV file
-  ./batch -test-csv ./test_corporations.csv
+  ./import -input ./gbiz_data.zip -dry-run
 
 The tool will:
-1. Download the latest basic corporation information ZIP file from gBizINFO
-   (or use a local CSV file if -test-csv is specified)
-2. Extract and parse the CSV data
-3. Perform bulk upsert operations to update the database
-4. Show progress and statistics during the import process
+1. Extract and parse the CSV data from the ZIP file
+2. Perform bulk upsert operations to update the database
+3. Show progress and statistics during the import process
 
 Note: The import process may take several minutes to hours depending on
-the data size and network/database performance.`)
+the data size and database performance.`)
 }

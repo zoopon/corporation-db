@@ -33,6 +33,13 @@ help:
 	@echo "  batch-run      - Run batch import (requires database)"
 	@echo "  batch-dry-run  - Run batch import in dry-run mode"
 	@echo "  batch-docker   - Run batch import in Docker"
+	@echo ""
+	@echo "Download and Import operations:"
+	@echo "  download-build - Build download command"
+	@echo "  import-build   - Build import command"
+	@echo "  build-all      - Build all commands"
+	@echo "  download-data  - Download data from gBizINFO"
+	@echo "  import-data    - Import data from ZIP file"
 
 # Docker環境でアプリケーションを起動（推奨）
 docker-run:
@@ -131,3 +138,24 @@ batch-dry-run: batch-build
 batch-docker:
 	@echo "Running batch import in Docker..."
 	docker-compose --profile batch up --build batch
+
+# Download and Import commands
+download-build:
+	@echo "Building download command..."
+	go build -o bin/download cmd/download/main.go
+
+import-build:
+	@echo "Building import command..."
+	go build -o bin/import cmd/import/main.go
+
+build-all: batch-build download-build import-build
+	@echo "All commands built successfully"
+
+download-data: download-build
+	@echo "Downloading data from gBizINFO..."
+	./bin/download -output ./data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
+
+import-data: import-build
+	@echo "Importing data from ZIP file..."
+	@read -p "Enter ZIP file path: " zipfile; \
+	./bin/import -input "$$zipfile"

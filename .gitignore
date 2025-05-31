@@ -49,6 +49,10 @@ docker-compose.override.yml
 *.db
 *.sqlite3
 
+# Data files (keep directory but ignore contents except .gitkeep)
+data/*
+!data/.gitkeep
+
 # Docker volumes and data
 postgres_data/
 

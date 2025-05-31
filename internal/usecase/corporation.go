@@ -215,3 +215,94 @@ type ImportStats struct {
 	StatusCounts      map[string]int `json:"status_counts"`
 	LastImportTime    time.Time      `json:"last_import_time"`
 }
+
+// ImportFromTestCSV imports corporation data from a local test CSV file
+func (u *CorporationUsecase) ImportFromTestCSV(ctx context.Context, csvPath string) error {
+	log.Printf("Starting test CSV import from: %s", csvPath)
+
+	// Load and parse test CSV
+	corporations, err := u.gbizClient.LoadTestCSVFile(csvPath)
+	if err != nil {
+		return fmt.Errorf("failed to load test CSV: %w", err)
+	}
+
+	log.Printf("Parsed %d corporations from test CSV", len(corporations))
+
+	if len(corporations) == 0 {
+		log.Println("No corporations to import")
+		return nil
+	}
+
+	// Bulk upsert to database
+	log.Println("Starting bulk upsert to database...")
+	startTime := time.Now()
+
+	err = u.corporationRepo.BulkUpsert(ctx, corporations)
+	if err != nil {
+		return fmt.Errorf("failed to bulk upsert corporations: %w", err)
+	}
+
+	duration := time.Since(startTime)
+	log.Printf("Successfully imported %d corporations in %v", len(corporations), duration)
+	log.Printf("Average: %.2f corporations/second", float64(len(corporations))/duration.Seconds())
+
+	return nil
+}
+
+// ImportFromZIPFile imports corporation data from a ZIP file with progress tracking
+func (u *CorporationUsecase) ImportFromZIPFile(ctx context.Context, zipPath string, progressCallback func(stage string, progress float64)) error {
+	if progressCallback != nil {
+		progressCallback("Starting import", 0)
+	}
+
+	log.Printf("Starting import from ZIP file: %s", zipPath)
+
+	// Extract and parse CSV
+	if progressCallback != nil {
+		progressCallback("Parsing CSV data", 10)
+	}
+
+	log.Println("Extracting and parsing CSV data...")
+	corporations, err := u.gbizClient.ExtractAndParseCSV(zipPath)
+	if err != nil {
+		return fmt.Errorf("failed to extract and parse CSV: %w", err)
+	}
+
+	if progressCallback != nil {
+		progressCallback("CSV parsing completed", 50)
+	}
+
+	log.Printf("Parsed %d corporations from CSV", len(corporations))
+
+	if len(corporations) == 0 {
+		if progressCallback != nil {
+			progressCallback("No data to import", 100)
+		}
+		log.Println("No corporations to import")
+		return nil
+	}
+
+	// Bulk upsert to database
+	if progressCallback != nil {
+		progressCallback("Importing to database", 60)
+	}
+
+	log.Println("Starting bulk upsert to database...")
+	startTime := time.Now()
+
+	err = u.corporationRepo.BulkUpsert(ctx, corporations)
+	if err != nil {
+		return fmt.Errorf("failed to bulk upsert corporations: %w", err)
+	}
+
+	duration := time.Since(startTime)
+
+	if progressCallback != nil {
+		progressCallback("Import completed", 100)
+	}
+
+	log.Printf("Successfully imported %d corporations in %v", len(corporations), duration)
+	log.Printf("Average: %.2f corporations/second", float64(len(corporations))/duration.Seconds())
+
+	return nil
+}

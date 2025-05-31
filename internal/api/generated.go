@@ -22,74 +22,83 @@ import (
 
 // Corporation defines model for Corporation.
 type Corporation struct {
-	// Address Address
-	Address *string `json:"address"`
+	// BusinessItems Business items (JSON format)
+	BusinessItems *string `json:"business_items"`
 
-	// BusinessDescription Business description
-	BusinessDescription *string `json:"business_description"`
+	// BusinessSummary Business summary
+	BusinessSummary *string `json:"business_summary"`
 
-	// CapitalStock Capital stock in yen
+	// CapitalStock Capital stock
 	CapitalStock *int64 `json:"capital_stock"`
 
-	// CityCode City code
-	CityCode *string `json:"city_code"`
+	// CloseCause Registration closure reason
+	CloseCause *string `json:"close_cause"`
+
+	// CloseDate Registration closure date
+	CloseDate *openapi_types.Date `json:"close_date"`
+
+	// CompanySizeFemale Company size (female employees)
+	CompanySizeFemale *int `json:"company_size_female"`
+
+	// CompanySizeMale Company size (male employees)
+	CompanySizeMale *int `json:"company_size_male"`
+
+	// CompanyUrl Company website URL
+	CompanyUrl *string `json:"company_url"`
 
 	// CorporateNumber 13-digit corporate number
 	CorporateNumber string `json:"corporate_number"`
 
-	// CorporateType Corporation type
-	CorporateType *string `json:"corporate_type"`
-
 	// CreatedAt Created time
 	CreatedAt time.Time `json:"created_at"`
 
-	// Email Email address
-	Email *string `json:"email"`
+	// DateOfEstablishment Date of establishment
+	DateOfEstablishment *openapi_types.Date `json:"date_of_establishment"`
 
 	// EmployeeNumber Number of employees
-	EmployeeNumber *int32 `json:"employee_number"`
+	EmployeeNumber *int `json:"employee_number"`
 
-	// EnglishName Corporation name in English
-	EnglishName *string `json:"english_name"`
-
-	// FoundingDate Founding date
-	FoundingDate *openapi_types.Date `json:"founding_date"`
+	// FoundingYear Founding year
+	FoundingYear *int `json:"founding_year"`
 
 	// Id Corporation ID
 	Id int64 `json:"id"`
 
-	// Industry Industry
-	Industry *string `json:"industry"`
+	// Kana Corporation name in katakana
+	Kana *string `json:"kana"`
 
-	// LastUpdated Last updated time from gBizINFO
-	LastUpdated *time.Time `json:"last_updated"`
+	// Location Head office location
+	Location *string `json:"location"`
 
 	// Name Corporation name
 	Name string `json:"name"`
 
-	// NameKana Corporation name in katakana
-	NameKana *string `json:"name_kana"`
+	// NameEn Corporation name in English
+	NameEn *string `json:"name_en"`
 
-	// Phone Phone number
-	Phone *string `json:"phone"`
+	// NumberOfActivity Number of activity
+	NumberOfActivity *string `json:"number_of_activity"`
 
 	// PostalCode Postal code
 	PostalCode *string `json:"postal_code"`
 
-	// PrefectureCode Prefecture code
-	PrefectureCode *string `json:"prefecture_code"`
+	// QualificationGrade Qualification grade
+	QualificationGrade *string `json:"qualification_grade"`
 
-	// Representative Representative name
-	Representative *string `json:"representative"`
+	// RepresentativeName Representative name
+	RepresentativeName *string `json:"representative_name"`
+
+	// RepresentativePosition Representative position
+	RepresentativePosition *string `json:"representative_position"`
 
 	// Status Corporation status
 	Status string `json:"status"`
 
+	// UpdateDate Last updated date from gBizINFO
+	UpdateDate *openapi_types.Date `json:"update_date"`
+
 	// UpdatedAt Updated time
 	UpdatedAt time.Time `json:"updated_at"`
-
-	// Website Website URL
-	Website *string `json:"website"`
 }
 
 // GetCorporationsParams defines parameters for GetCorporations.
@@ -384,33 +393,35 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"Oh4XAAA=",
+	"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",
+	"jlvHLdyr934LAAD//1QB/GjsGAAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

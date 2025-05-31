@@ -52,7 +52,6 @@ func (r *CorporationRepository) GetWithFilter(ctx context.Context, filter domain
 	name := ""
 	prefecture := ""
 	status := ""
-	corporateType := ""
 
 	if filter.CorporateNumber != nil {
 		corporateNumber = *filter.CorporateNumber
@@ -66,9 +65,6 @@ func (r *CorporationRepository) GetWithFilter(ctx context.Context, filter domain
 	if filter.Status != nil {
 		status = *filter.Status
 	}
-	if filter.CorporateType != nil {
-		corporateType = *filter.CorporateType
-	}
 
 	// Get total count
 	total, err := r.queries.CountCorporationsWithFilter(ctx, db.CountCorporationsWithFilterParams{
@@ -76,7 +72,6 @@ func (r *CorporationRepository) GetWithFilter(ctx context.Context, filter domain
 		Column2: name,
 		Column3: prefecture,
 		Column4: status,
-		Column5: corporateType,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count corporations: %w", err)
@@ -88,7 +83,6 @@ func (r *CorporationRepository) GetWithFilter(ctx context.Context, filter domain
 		Column2: name,
 		Column3: prefecture,
 		Column4: status,
-		Column5: corporateType,
 		Limit:   int32(filter.Limit),
 		Offset:  int32(filter.Offset),
 	})
@@ -161,26 +155,29 @@ func (r *CorporationRepository) BulkUpsert(ctx context.Context, corporations []*
 
 		for j, corp := range batch {
 			params := db.UpsertCorporationParams{
-				CorporateNumber:     corp.CorporateNumber,
-				Name:                corp.Name,
-				NameKana:            r.stringToNullString(corp.NameKana),
-				EnglishName:         r.stringToNullString(corp.EnglishName),
-				PostalCode:          r.stringToNullString(corp.PostalCode),
-				Address:             r.stringToNullString(corp.Address),
-				PrefectureCode:      r.stringToNullString(corp.PrefectureCode),
-				CityCode:            r.stringToNullString(corp.CityCode),
-				FoundingDate:        r.timeToNullTime(corp.FoundingDate),
-				Status:              corp.Status,
-				CorporateType:       r.stringToNullString(corp.CorporateType),
-				CapitalStock:        r.int64ToNullInt64(corp.CapitalStock),
-				EmployeeNumber:      r.int32ToNullInt32(corp.EmployeeNumber),
-				Representative:      r.stringToNullString(corp.Representative),
-				BusinessDescription: r.stringToNullString(corp.BusinessDescription),
-				Industry:            r.stringToNullString(corp.Industry),
-				Website:             r.stringToNullString(corp.Website),
-				Phone:               r.stringToNullString(corp.Phone),
-				Email:               r.stringToNullString(corp.Email),
-				LastUpdated:         r.timeToNullTime(corp.LastUpdated),
+				CorporateNumber:        corp.CorporateNumber,
+				Name:                   corp.Name,
+				Kana:                   r.stringToNullString(corp.Kana),
+				NameEn:                 r.stringToNullString(corp.NameEn),
+				PostalCode:             r.stringToNullString(corp.PostalCode),
+				Location:               r.stringToNullString(corp.Location),
+				Status:                 corp.Status,
+				CloseDate:              r.timeToNullTime(corp.CloseDate),
+				CloseCause:             r.stringToNullString(corp.CloseCause),
+				RepresentativeName:     r.stringToNullString(corp.RepresentativeName),
+				RepresentativePosition: r.stringToNullString(corp.RepresentativePosition),
+				DateOfEstablishment:    r.timeToNullTime(corp.DateOfEstablishment),
+				FoundingYear:           r.int32ToNullInt32(corp.FoundingYear),
+				CapitalStock:           r.int64ToNullInt64(corp.CapitalStock),
+				EmployeeNumber:         r.int32ToNullInt32(corp.EmployeeNumber),
+				CompanySizeMale:        r.int32ToNullInt32(corp.CompanySizeMale),
+				CompanySizeFemale:      r.int32ToNullInt32(corp.CompanySizeFemale),
+				BusinessItems:          r.stringToNullString(corp.BusinessItems),
+				BusinessSummary:        r.stringToNullString(corp.BusinessSummary),
+				CompanyUrl:             r.stringToNullString(corp.CompanyUrl),
+				QualificationGrade:     r.stringToNullString(corp.QualificationGrade),
+				NumberOfActivity:       r.stringToNullString(corp.NumberOfActivity),
+				UpdateDate:             r.timeToNullTime(corp.UpdateDate),
 			}
 
 			_, err := txQueries.UpsertCorporation(ctx, params)
@@ -205,29 +202,44 @@ func (r *CorporationRepository) BulkUpsert(ctx context.Context, corporations []*
 // Helper function to convert database Corporation to domain Corporation
 func (r *CorporationRepository) dbToDomainCorporation(dbCorp *db.Corporation) (*domain.Corporation, error) {
 	corp := &domain.Corporation{
-		ID:                  int64(dbCorp.ID),
-		CorporateNumber:     dbCorp.CorporateNumber,
-		Name:                dbCorp.Name,
-		NameKana:            r.nullStringToString(dbCorp.NameKana),
-		EnglishName:         r.nullStringToString(dbCorp.EnglishName),
-		PostalCode:          r.nullStringToString(dbCorp.PostalCode),
-		Address:             r.nullStringToString(dbCorp.Address),
-		PrefectureCode:      r.nullStringToString(dbCorp.PrefectureCode),
-		CityCode:            r.nullStringToString(dbCorp.CityCode),
-		FoundingDate:        r.nullTimeToTime(dbCorp.FoundingDate),
-		Status:              dbCorp.Status,
-		CorporateType:       r.nullStringToString(dbCorp.CorporateType),
+		ID:              int64(dbCorp.ID),
+		CorporateNumber: dbCorp.CorporateNumber,
+		Name:            dbCorp.Name,
+		Kana:            r.nullStringToString(dbCorp.Kana),
+		NameEn:          r.nullStringToString(dbCorp.NameEn),
+		PostalCode:      r.nullStringToString(dbCorp.PostalCode),
+		Location:        r.nullStringToString(dbCorp.Location),
+		Status:          dbCorp.Status,
+
+		// Registration Information
+		CloseDate:  r.nullTimeToTime(dbCorp.CloseDate),
+		CloseCause: r.nullStringToString(dbCorp.CloseCause),
+
+		// Representative Information
+		RepresentativeName:     r.nullStringToString(dbCorp.RepresentativeName),
+		RepresentativePosition: r.nullStringToString(dbCorp.RepresentativePosition),
+
+		// Company Details
+		DateOfEstablishment: r.nullTimeToTime(dbCorp.DateOfEstablishment),
+		FoundingYear:        r.nullInt32ToInt32(dbCorp.FoundingYear),
 		CapitalStock:        r.nullInt64ToInt64(dbCorp.CapitalStock),
 		EmployeeNumber:      r.nullInt32ToInt32(dbCorp.EmployeeNumber),
-		Representative:      r.nullStringToString(dbCorp.Representative),
-		BusinessDescription: r.nullStringToString(dbCorp.BusinessDescription),
-		Industry:            r.nullStringToString(dbCorp.Industry),
-		Website:             r.nullStringToString(dbCorp.Website),
-		Phone:               r.nullStringToString(dbCorp.Phone),
-		Email:               r.nullStringToString(dbCorp.Email),
-		LastUpdated:         r.nullTimeToTime(dbCorp.LastUpdated),
-		CreatedAt:           r.nullTimeToTimeValue(dbCorp.CreatedAt),
-		UpdatedAt:           r.nullTimeToTimeValue(dbCorp.UpdatedAt),
+		CompanySizeMale:     r.nullInt32ToInt32(dbCorp.CompanySizeMale),
+		CompanySizeFemale:   r.nullInt32ToInt32(dbCorp.CompanySizeFemale),
+
+		// Business Information
+		BusinessItems:      r.nullStringToString(dbCorp.BusinessItems),
+		BusinessSummary:    r.nullStringToString(dbCorp.BusinessSummary),
+		CompanyUrl:         r.nullStringToString(dbCorp.CompanyUrl),
+		QualificationGrade: r.nullStringToString(dbCorp.QualificationGrade),
+		NumberOfActivity:   r.nullStringToString(dbCorp.NumberOfActivity),
+
+		// gBizINFO Metadata
+		UpdateDate: r.nullTimeToTime(dbCorp.UpdateDate),
+
+		// Database Metadata
+		CreatedAt: r.nullTimeToTimeValue(dbCorp.CreatedAt),
+		UpdatedAt: r.nullTimeToTimeValue(dbCorp.UpdatedAt),
 	}
 
 	return corp, nil

@@ -8,19 +8,22 @@ import (
 
 	"corporation-db/internal/domain"
 	"corporation-db/internal/infrastructure"
+	"corporation-db/internal/utils"
 )
 
 // CorporationUsecase handles corporation business logic
 type CorporationUsecase struct {
 	corporationRepo domain.CorporationRepository
 	gbizClient      *infrastructure.GBizClient
+	textConverter   *utils.TextConverter
 }
 
 // NewCorporationUsecase creates a new CorporationUsecase
-func NewCorporationUsecase(corporationRepo domain.CorporationRepository, gbizClient *infrastructure.GBizClient) *CorporationUsecase {
+func NewCorporationUsecase(corporationRepo domain.CorporationRepository, gbizClient *infrastructure.GBizClient, textConverter *utils.TextConverter) *CorporationUsecase {
 	return &CorporationUsecase{
 		corporationRepo: corporationRepo,
 		gbizClient:      gbizClient,
+		textConverter:   textConverter,
 	}
 }
 
@@ -46,6 +49,12 @@ func (u *CorporationUsecase) GetByCorporateNumber(ctx context.Context, corporate
 
 // GetCorporations retrieves corporations with filtering and pagination
 func (u *CorporationUsecase) GetCorporations(ctx context.Context, filter domain.CorporationFilter) ([]*domain.Corporation, int64, error) {
+	// Normalize name for search if provided
+	if filter.Name != nil && *filter.Name != "" {
+		normalizedName := u.textConverter.NormalizeForSearch(*filter.Name)
+		filter.Name = &normalizedName
+	}
+
 	return u.corporationRepo.GetWithFilter(ctx, filter)
 }
 

@@ -13,6 +13,7 @@ import (
 
 	"corporation-db/internal/infrastructure"
 	"corporation-db/internal/usecase"
+	"corporation-db/internal/utils"
 
 	_ "github.com/lib/pq"
 )
@@ -82,7 +83,8 @@ func main() {
 	// Initialize repositories and use cases
 	corporationRepo := infrastructure.NewCorporationRepository(db)
 	gbizClient := infrastructure.NewGBizClient()
-	corporationUsecase := usecase.NewCorporationUsecase(corporationRepo, gbizClient)
+	textConverter := utils.NewTextConverter()
+	corporationUsecase := usecase.NewCorporationUsecase(corporationRepo, gbizClient, textConverter)
 
 	// Start import process with progress tracking
 	startTime := time.Now()

@@ -9,6 +9,7 @@ import (
 	"corporation-db/internal/infrastructure"
 	"corporation-db/internal/presentation"
 	"corporation-db/internal/usecase"
+	"corporation-db/internal/utils"
 
 	"github.com/joho/godotenv"
 )
@@ -33,8 +34,11 @@ func main() {
 	// Initialize gBiz client (for batch operations)
 	gbizClient := infrastructure.NewGBizClient()
 
+	// Initialize text converter
+	textConverter := utils.NewTextConverter()
+
 	// Initialize use cases
-	corporationUsecase := usecase.NewCorporationUsecase(corporationRepo, gbizClient)
+	corporationUsecase := usecase.NewCorporationUsecase(corporationRepo, gbizClient, textConverter)
 
 	// Initialize router with handlers
 	router := presentation.NewRouter(corporationUsecase)

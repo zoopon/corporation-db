@@ -62,7 +62,7 @@ cd corporation-db
 ```bash
 make docker-run
 # または
-docker-compose up --build
+docker compose up --build
 ```
 
 アプリケーションは http://localhost:8080 でアクセス可能になります。
@@ -83,13 +83,13 @@ Docker-Composeを使用して、データ取得・インポート・アプリケ
 
 ```bash
 # データベースを起動
-docker-compose up -d db
+docker compose up -d db
 
 # データベースの起動確認（約10-15秒待機）
-docker-compose logs db
+docker compose logs db
 
 # データベース接続確認
-docker-compose exec db psql -U postgres -d corporation_db -c "\dt"
+docker compose exec db psql -U postgres -d corporation_db -c "\dt"
 ```
 
 **確認ポイント:**
@@ -103,11 +103,11 @@ docker-compose exec db psql -U postgres -d corporation_db -c "\dt"
 
 ```bash
 # ダウンロード用コンテナでデータ取得（推奨）
-docker-compose run --rm download ./download \
+docker compose run --rm download ./download \
   -output /data/gbiz_$(date +%Y%m%d_%H%M%S).zip
 
 # または、固定ファイル名でダウンロード
-docker-compose run --rm download ./download \
+docker compose run --rm download ./download \
   -output /data/gbiz_latest.zip
 
 # Makefileターゲット使用（推奨）
@@ -125,15 +125,15 @@ make download-data-docker
 
 ```bash
 # ダウンロードしたZIPファイルをインポート
-docker-compose run --rm import go run ./cmd/import \
+docker compose run --rm import go run ./cmd/import \
   -input /data/gbiz_latest.zip
 
 # または、特定のタイムスタンプ付きファイルをインポート
-docker-compose run --rm import go run ./cmd/import \
+docker compose run --rm import go run ./cmd/import \
   -input /data/gbiz_20241231_120000.zip
 
 # dry-runでインポート内容を事前確認（推奨）
-docker-compose run --rm import go run ./cmd/import \
+docker compose run --rm import go run ./cmd/import \
   -input /data/gbiz_latest.zip \
   -dry-run
 ```
@@ -149,10 +149,10 @@ docker-compose run --rm import go run ./cmd/import \
 
 ```bash
 # APIサーバーを起動
-docker-compose up -d app
+docker compose up -d app
 
 # ログ確認
-docker-compose logs -f app
+docker compose logs -f app
 
 # ヘルスチェック
 curl http://localhost:8080/health
@@ -193,38 +193,38 @@ curl "http://localhost:8080/corporations/1234567890123"
 #### 全サービス起動
 ```bash
 # 全サービス起動（バックグラウンド）
-docker-compose up -d
+docker compose up -d
 
 # 全サービス起動（フォアグラウンド）
-docker-compose up
+docker compose up
 ```
 
 #### サービス状態確認
 ```bash
 # サービス状態確認
-docker-compose ps
+docker compose ps
 
 # ログ確認
-docker-compose logs
+docker compose logs
 
 # 特定サービスのログ確認
-docker-compose logs app
-docker-compose logs db
+docker compose logs app
+docker compose logs db
 ```
 
 #### サービス停止・クリーンアップ
 ```bash
 # 全サービス停止
-docker-compose down
+docker compose down
 
 # データ保持して停止
-docker-compose down
+docker compose down
 
 # データも削除して停止（注意！）
-docker-compose down -v
+docker compose down -v
 
 # 不要なイメージも削除
-docker-compose down --rmi all
+docker compose down --rmi all
 ```
 
 ---
@@ -237,27 +237,27 @@ docker-compose down --rmi all
 
 ```bash
 # 方法1: ボリュームを削除してデータベースを完全リセット
-docker-compose down -v
-docker-compose up -d db
+docker compose down -v
+docker compose up -d db
 
 # 方法2: 既存のデータベースコンテナを削除して再構築
-docker-compose down
+docker compose down
 docker volume rm corporatioin-db_postgres_data
-docker-compose up -d db
+docker compose up -d db
 
 # 方法3: テーブルのデータのみを削除（テーブル構造は保持）
-docker-compose exec db psql -U postgres -d corporation_db -c "TRUNCATE TABLE corporations, users RESTART IDENTITY CASCADE;"
+docker compose exec db psql -U postgres -d corporation_db -c "TRUNCATE TABLE corporations, users RESTART IDENTITY CASCADE;"
 
 # 方法4: 特定のテーブルのみリセット（corporationsテーブルのみ）
-docker-compose exec db psql -U postgres -d corporation_db -c "TRUNCATE TABLE corporations RESTART IDENTITY CASCADE;"
+docker compose exec db psql -U postgres -d corporation_db -c "TRUNCATE TABLE corporations RESTART IDENTITY CASCADE;"
 
 # リセット後の確認
-docker-compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM corporations;"
-docker-compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM users;"
+docker compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM corporations;"
+docker compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM users;"
 ```
 
 **⚠️ 注意事項:**
-- `docker-compose down -v` は **すべてのデータが永久に削除** されます
+- `docker compose down -v` は **すべてのデータが永久に削除** されます
 - `TRUNCATE` コマンドは **データのみ削除**、テーブル構造は保持されます
 - 本番環境では絶対に実行しないでください
 
@@ -265,16 +265,16 @@ docker-compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FR
 
 ```bash
 # データベース内のテーブル一覧
-docker-compose exec db psql -U postgres -d corporation_db -c "\dt"
+docker compose exec db psql -U postgres -d corporation_db -c "\dt"
 
 # 各テーブルのレコード数確認
-docker-compose exec db psql -U postgres -d corporation_db -c "
+docker compose exec db psql -U postgres -d corporation_db -c "
   SELECT 'corporations' as table_name, COUNT(*) as record_count FROM corporations
   UNION ALL
   SELECT 'users' as table_name, COUNT(*) as record_count FROM users;"
 
 # 都道府県別の法人数統計
-docker-compose exec db psql -U postgres -d corporation_db -c "
+docker compose exec db psql -U postgres -d corporation_db -c "
   SELECT prefecture_code, COUNT(*) as corporation_count 
   FROM corporations 
   WHERE prefecture_code IS NOT NULL 
@@ -282,44 +282,44 @@ docker-compose exec db psql -U postgres -d corporation_db -c "
   ORDER BY prefecture_code;"
 
 # データベースサイズ確認
-docker-compose exec db psql -U postgres -d corporation_db -c "
+docker compose exec db psql -U postgres -d corporation_db -c "
   SELECT pg_size_pretty(pg_database_size('corporation_db')) as database_size;"
 ```
 
 #### データベース接続エラー
 ```bash
 # データベースコンテナの状態確認
-docker-compose logs db
+docker compose logs db
 
 # データベース再起動
-docker-compose restart db
+docker compose restart db
 
 # データベース接続確認
-docker-compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM corporations;"
+docker compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM corporations;"
 ```
 
 #### インポートエラー
 ```bash
 # インポートログ確認
-docker-compose logs import
+docker compose logs import
 
 # dry-runで事前確認
-docker-compose run --rm import go run ./cmd/import -input /data/gbiz_latest.zip -dry-run
+docker compose run --rm import go run ./cmd/import -input /data/gbiz_latest.zip -dry-run
 
 # データベースの現在の状態確認
-docker-compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM corporations WHERE prefecture_code IS NOT NULL;"
+docker compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM corporations WHERE prefecture_code IS NOT NULL;"
 ```
 
 #### APIサーバーエラー
 ```bash
 # APIサーバーログ確認
-docker-compose logs app
+docker compose logs app
 
 # ヘルスチェック
 curl http://localhost:8080/health
 
 # APIサーバー再起動
-docker-compose restart app
+docker compose restart app
 ```
 
 ---
@@ -339,20 +339,20 @@ FILENAME="gbiz_$(date +%Y%m%d_%H%M%S).zip"
 echo "Starting gBizINFO data update..."
 
 # 1. データベース起動確認
-docker-compose up -d db
+docker compose up -d db
 sleep 10
 
 # 2. 新しいデータをダウンロード
 echo "Downloading latest data..."
-docker-compose run --rm download -output "/data/$FILENAME"
+docker compose run --rm download -output "/data/$FILENAME"
 
 # 3. データをインポート
 echo "Importing data..."
-docker-compose run --rm import go run ./cmd/import -input "/data/$FILENAME"
+docker compose run --rm import go run ./cmd/import -input "/data/$FILENAME"
 
 # 4. APIサーバー起動
 echo "Starting API server..."
-docker-compose up -d app
+docker compose up -d app
 
 # 5. 動作確認
 sleep 5
@@ -378,14 +378,14 @@ chmod +x update_gbiz_data.sh
 
 - **ボリューム**: `postgres_data` 名前付きボリュームでデータ保存
 - **再起動後も保持**: Docker/Docker Composeを再起動してもデータは削除されません
-- **完全削除**: `docker-compose down -v` でボリュームも削除される
+- **完全削除**: `docker compose down -v` でボリュームも削除される
 
 ```bash
 # データ保持して再起動
-docker-compose down && docker-compose up -d
+docker compose down && docker compose up -d
 
 # データも含めて完全削除（注意！）
-docker-compose down -v
+docker compose down -v
 ```
 
 ## 開発状況
@@ -402,7 +402,7 @@ docker-compose down -v
 #### Docker Download実行時の問題修正
 
 **問題**: 
-- Makefileの`docker-compose run`コマンドでdownloadバイナリに引数が正しく渡されない
+- Makefileの`docker compose run`コマンドでdownloadバイナリに引数が正しく渡されない
 - Dockerボリュームマウント環境でのファイル移動（`os.Rename`）がクロスファイルシステムエラーで失敗
 
 **修正内容**:
@@ -410,10 +410,10 @@ docker-compose down -v
 1. **Makefile修正**: Docker引数渡し問題の解決
    ```makefile
    # 修正前（引数が正しく渡されない）
-   docker-compose run --rm download -output /data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
+   docker compose run --rm download -output /data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
 
    # 修正後（バイナリパスを明示的に指定）
-   docker-compose run --rm download ./download -output /data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
+   docker compose run --rm download ./download -output /data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
    ```
 
 2. **ファイルシステム修正**: `cmd/download/main.go`
@@ -646,7 +646,7 @@ make generate-api
 
 ### Docker Compose環境変数
 
-アプリケーションの設定は`docker-compose.yml`で管理されています：
+アプリケーションの設定は`docker compose.yml`で管理されています：
 
 ```yaml
 environment:
@@ -658,7 +658,7 @@ environment:
   - PORT=8080
 ```
 
-カスタマイズが必要な場合は、`.env`ファイルを作成するか`docker-compose.override.yml`を使用してください。
+カスタマイズが必要な場合は、`.env`ファイルを作成するか`docker compose.override.yml`を使用してください。
 
 ## データベース
 
@@ -668,7 +668,7 @@ PostgreSQL 15を使用しています。マイグレーションファイルは 
 
 ```bash
 # Dockerコンテナのデータベースに接続
-docker-compose exec db psql -U postgres -d corporation_db
+docker compose exec db psql -U postgres -d corporation_db
 ```
 
 ## コントリビューション

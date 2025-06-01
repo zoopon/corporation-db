@@ -1,4 +1,18 @@
-.PHONY: help docker-run docker-up docker-down docker-rebuild sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all db-reset db-reset-data db-status db-connect
+.PHONY: help docker-run docker-up docker-down docker-rebuild sql# Docker環境でアプリケーションを起動（開発環境・ホットリロード対応）
+docker-run:
+	docker compose up --build
+
+# Dockerコンテナを起動（バックグラウンド）
+docker-up:
+	docker compose up -d
+
+# Dockerコンテナを停止
+docker-down:
+	docker compose down
+
+# Dockerイメージを再ビルド
+docker-build:
+	docker compose build --no-cachema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all db-reset db-reset-data db-status db-connect
 
 # デフォルトターゲット
 help:
@@ -64,19 +78,19 @@ help:
 
 # Docker環境でアプリケーションを起動（開発環境・ホットリロード対応）
 docker-run:
-	docker-compose up --build
+	docker compose up --build
 
 # Dockerコンテナを起動（バックグラウンド）
 docker-up:
-	docker-compose up -d
+	docker compose up -d
 
 # Dockerコンテナを停止
 docker-down:
-	docker-compose down
+	docker compose down
 
 # Dockerイメージを強制的に再ビルド（キャッシュなし）
 docker-rebuild:
-	docker-compose build --no-cache
+	docker compose build --no-cache
 
 # SQLCでコードを生成
 sqlc-generate:
@@ -84,7 +98,7 @@ sqlc-generate:
 
 # 開発環境でSQLCコードを生成（Docker内で実行）
 sqlc-generate-docker:
-	docker-compose exec app sqlc generate
+	docker compose exec app sqlc generate
 
 # oapi-codegenでAPIコードを生成
 generate-api:
@@ -93,35 +107,35 @@ generate-api:
 
 # Redocly: OpenAPI仕様をlint
 openapi-lint:
-	docker-compose --profile docs run --rm redocly lint api/openapi.yaml
+	docker compose --profile docs run --rm redocly lint api/openapi.yaml
 
 # Redocly: 分割されたOpenAPIファイルを単一ファイルにバンドル
 openapi-bundle:
-	docker-compose --profile docs run --rm redocly bundle api/openapi.yaml --output api/openapi-bundled.yaml
+	docker compose --profile docs run --rm redocly bundle api/openapi.yaml --output api/openapi-bundled.yaml
 
 # Redocly: API ドキュメントをプレビュー
 openapi-preview:
-	docker-compose --profile docs run --rm -p 8081:8080 redocly preview-docs api/openapi.yaml --host 0.0.0.0
+	docker compose --profile docs run --rm -p 8081:8080 redocly preview-docs api/openapi.yaml --host 0.0.0.0
 
 # Redocly: API ドキュメントをプレビュー（バックグラウンド）
 openapi-preview-bg:
 	@echo "Starting API documentation preview at http://localhost:8081"
-	docker-compose --profile docs up -d redocly
-	docker-compose --profile docs exec redocly redocly preview-docs api/openapi.yaml --host 0.0.0.0 --port 8080 &
+	docker compose --profile docs up -d redocly
+	docker compose --profile docs exec redocly redocly preview-docs api/openapi.yaml --host 0.0.0.0 --port 8080 &
 
 # Redocly: プレビューサーバーを停止
 openapi-preview-stop:
-	docker-compose --profile docs down
+	docker compose --profile docs down
 
 # sqldef: スキーマを適用
 schema-apply:
-	docker-compose --profile migration run --rm -T -e PGPASSWORD=password sqldef \
+	docker compose --profile migration run --rm -T -e PGPASSWORD=password sqldef \
 		-h db -p 5432 -U postgres \
 		corporation_db < db/schema.sql
 
 # sqldef: スキーマの差分を確認（dry-run）
 schema-diff:
-	docker-compose --profile migration run --rm -T -e PGPASSWORD=password sqldef \
+	docker compose --profile migration run --rm -T -e PGPASSWORD=password sqldef \
 		-h db -p 5432 -U postgres --dry-run \
 		corporation_db < db/schema.sql
 
@@ -130,13 +144,13 @@ schema-dry-run: schema-diff
 
 # sqldef: 現在のスキーマをエクスポート
 schema-export:
-	docker-compose --profile migration run --rm -T -e PGPASSWORD=password sqldef \
+	docker compose --profile migration run --rm -T -e PGPASSWORD=password sqldef \
 		-h db -p 5432 -U postgres --export \
 		corporation_db
 
 # sqldef: データベース接続確認
 schema-check:
-	docker-compose exec db psql -U postgres -d corporation_db -c "SELECT current_database(), current_user;"
+	docker compose exec db psql -U postgres -d corporation_db -c "SELECT current_database(), current_user;"
 
 # 全コード生成（推奨）
 generate-all: openapi-bundle generate-api sqlc-generate
@@ -145,11 +159,11 @@ generate-all: openapi-bundle generate-api sqlc-generate
 # API documentation commands
 docs-serve:
 	@echo "Starting API documentation server..."
-	docker-compose --profile docs up redocly
+	docker compose --profile docs up redocly
 
 docs-build:
 	@echo "Building static API documentation..."
-	docker-compose --profile docs run --rm redocly build-docs api/openapi.yaml --output docs/
+	docker compose --profile docs run --rm redocly build-docs api/openapi.yaml --output docs/
 
 # Batch operation commands
 batch-build:
@@ -166,7 +180,7 @@ batch-dry-run: batch-build
 
 batch-docker:
 	@echo "Running batch import in Docker..."
-	docker-compose --profile batch up --build batch
+	docker compose --profile batch up --build batch
 
 # Download and Import commands
 download-build:
@@ -186,7 +200,7 @@ download-data: download-build
 
 download-data-docker:
 	@echo "Downloading data from gBizINFO using Docker..."
-	docker-compose run --rm download ./download -output /data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
+	docker compose run --rm download ./download -output /data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
 
 import-data: import-build
 	@echo "Importing data from ZIP file..."
@@ -196,7 +210,7 @@ import-data: import-build
 import-data-docker:
 	@echo "Importing data from ZIP file using Docker..."
 	@read -p "Enter ZIP file path (relative to ./data/): " zipfile; \
-	docker-compose run --rm import go run ./cmd/import -input "/data/$$zipfile"
+	docker compose run --rm import go run ./cmd/import -input "/data/$$zipfile"
 
 # Database operations
 db-reset:
@@ -205,9 +219,9 @@ db-reset:
 	@read -p "Are you sure you want to reset the database? (yes/NO): " confirm; \
 	if [ "$$confirm" = "yes" ]; then \
 		echo "Stopping containers and removing volumes..."; \
-		docker-compose down -v; \
+		docker compose down -v; \
 		echo "Starting fresh database..."; \
-		docker-compose up -d db; \
+		docker compose up -d db; \
 		echo "Waiting for database to be ready..."; \
 		sleep 10; \
 		echo "Database reset completed successfully!"; \
@@ -221,7 +235,7 @@ db-reset-data:
 	@read -p "Are you sure you want to reset table data? (yes/NO): " confirm; \
 	if [ "$$confirm" = "yes" ]; then \
 		echo "Truncating tables..."; \
-		docker-compose exec db psql -U postgres -d corporation_db -c "TRUNCATE TABLE corporations, users RESTART IDENTITY CASCADE;"; \
+		docker compose exec db psql -U postgres -d corporation_db -c "TRUNCATE TABLE corporations, users RESTART IDENTITY CASCADE;"; \
 		echo "Data reset completed successfully!"; \
 		make db-status; \
 	else \
@@ -231,15 +245,15 @@ db-reset-data:
 db-status:
 	@echo "=== Database Status ==="
 	@echo "Tables:"
-	@docker-compose exec db psql -U postgres -d corporation_db -c "\dt"
+	@docker compose exec db psql -U postgres -d corporation_db -c "\dt"
 	@echo ""
 	@echo "Record counts:"
-	@docker-compose exec db psql -U postgres -d corporation_db -c "SELECT 'corporations' as table_name, COUNT(*) as record_count FROM corporations UNION ALL SELECT 'users' as table_name, COUNT(*) as record_count FROM users;"
+	@docker compose exec db psql -U postgres -d corporation_db -c "SELECT 'corporations' as table_name, COUNT(*) as record_count FROM corporations UNION ALL SELECT 'users' as table_name, COUNT(*) as record_count FROM users;"
 	@echo ""
 	@echo "Database size:"
-	@docker-compose exec db psql -U postgres -d corporation_db -c "SELECT pg_size_pretty(pg_database_size('corporation_db')) as database_size;"
+	@docker compose exec db psql -U postgres -d corporation_db -c "SELECT pg_size_pretty(pg_database_size('corporation_db')) as database_size;"
 
 db-connect:
 	@echo "Connecting to database shell..."
 	@echo "Use \\q to exit the database shell"
-	docker-compose exec db psql -U postgres -d corporation_db
+	docker compose exec db psql -U postgres -d corporation_db

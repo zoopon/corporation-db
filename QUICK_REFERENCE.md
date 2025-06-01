@@ -65,7 +65,7 @@ make generate-all
 ### トラブルシューティング
 ```bash
 # Docker 完全クリーンアップ
-docker-compose down --volumes --rmi all
+docker compose down --volumes --rmi all
 docker system prune -af
 
 # SQLC クリーンアップ
@@ -96,8 +96,8 @@ go mod download
 - [ ] NULL可能フィールドが `sql.NullString` 等で適切に定義
 
 #### ✅ Docker 関連
-- [ ] `docker-compose build` が成功
-- [ ] `docker-compose up` でサービス起動
+- [ ] `docker compose build` が成功
+- [ ] `docker compose up` でサービス起動
 - [ ] ヘルスチェックエンドポイント応答確認
 - [ ] データベース接続確認
 - [ ] 法人情報API（`/corporations`）の動作確認
@@ -149,7 +149,7 @@ cat docker/Dockerfile
 ls -la cmd/api/main.go
 
 # キャッシュクリア再ビルド
-docker-compose build --no-cache
+docker compose build --no-cache
 ```
 
 ---
@@ -159,7 +159,7 @@ docker-compose build --no-cache
 ```
 📦 corporatioin-db/
 ├── 🔧 設定ファイル群
-│   ├── docker-compose.yml     # 開発環境定義
+│   ├── docker compose.yml     # 開発環境定義
 │   ├── Makefile              # 開発コマンド
 │   ├── sqlc.yaml             # DB コード生成設定
 │   ├── oapi-codegen.yaml     # API コード生成設定
@@ -236,7 +236,7 @@ func (q *Queries) GetUserByID redeclared in this block
 - sqlc.yaml は確認済みで正しい設定
 
 **試行済み:**
-- docker-compose build --no-cache
+- docker compose build --no-cache
 - rm -rf internal/infrastructure/db/*.sql.go
 
 どのような原因と解決策が考えられますか？
@@ -335,7 +335,7 @@ curl "http://localhost:8080/corporations?prefecture_code=13&limit=10"
 head -5 data/gbiz_*.csv | cut -d',' -f4
 
 # データベースの都道府県コード分布確認
-docker-compose exec db psql -U postgres -d corporation_db -c \
+docker compose exec db psql -U postgres -d corporation_db -c \
   "SELECT prefecture_code, COUNT(*) FROM corporations GROUP BY prefecture_code ORDER BY prefecture_code;"
 ```
 
@@ -346,7 +346,7 @@ docker-compose exec db psql -U postgres -d corporation_db -c \
 curl -v "http://localhost:8080/corporations?prefecture_code=13"
 
 # データベース直接確認
-docker-compose exec db psql -U postgres -d corporation_db -c \
+docker compose exec db psql -U postgres -d corporation_db -c \
   "SELECT name, location, prefecture_code FROM corporations WHERE prefecture_code = '13' LIMIT 5;"
 ```
 

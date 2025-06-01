@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
 // Router holds the HTTP router and handlers
@@ -26,6 +27,16 @@ func NewRouter(corporationUsecase *usecase.CorporationUsecase) *Router {
 // SetupRoutes configures all routes using the generated API handler
 func (router *Router) SetupRoutes() *chi.Mux {
 	r := chi.NewRouter()
+
+	// CORS middleware - Allow cross-origin requests
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},              // Allow all origins for development
+		AllowedMethods:   []string{"GET", "OPTIONS"}, // Only allow read operations
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	}))
 
 	// Middleware
 	r.Use(middleware.RequestID)

@@ -1,11 +1,24 @@
-.PHONY: help docker-run docker-up docker-down sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all db-reset db-reset-data db-status db-connect
+.PHONY: help docker-run docker-up docker-down docker-rebuild sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all db-reset db-reset-data db-status db-connect
 
 # デフォルトターゲット
 help:
 	@echo "Available commands:"
-	@echo "  docker-run     - Start application with Docker (recommended)"
-	@echo "  docker-up      - Start Docker containers"
+	@echo "  docker-run     - Start development environment with hot reload"
+	@echo "  docker-up      - Start Docker containers (background)"
 	@echo "  docker-down    - Stop Docker containers"
+	@echo "  docker-rebuild - Force rebuild Docker images (no cache)" docker-run docker-up docker-down docker-dev docker-dev-up docker-dev-down docker-rebuild sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all db-reset db-reset-data db-status db-connect
+
+# デフォルトターゲット
+help:
+	@echo "Available commands:"
+	@echo "  docker-run      - Start application with Docker (production)"
+	@echo "  docker-up       - Start Docker containers (production)"
+	@echo "  docker-down     - Stop Docker containers"
+	@echo "  docker-dev      - Start development environment with hot reload"
+	@echo "  docker-dev-up   - Start development containers"
+	@echo "  docker-dev-down - Stop development containers"
+	@echo "  docker-rebuild  - Force rebuild Docker images (no cache)"
+	@echo "  docker-rebuild-dev - Force rebuild development Docker images"
 	@echo "  generate-all   - Generate all code (API + SQLC)"
 	@echo ""
 	@echo "Code generation:"
@@ -49,7 +62,7 @@ help:
 	@echo "  import-data          - Import data from ZIP file (local)"
 	@echo "  import-data-docker   - Import data from ZIP file (Docker)"
 
-# Docker環境でアプリケーションを起動（推奨）
+# Docker環境でアプリケーションを起動（開発環境・ホットリロード対応）
 docker-run:
 	docker-compose up --build
 
@@ -61,9 +74,17 @@ docker-up:
 docker-down:
 	docker-compose down
 
+# Dockerイメージを強制的に再ビルド（キャッシュなし）
+docker-rebuild:
+	docker-compose build --no-cache
+
 # SQLCでコードを生成
 sqlc-generate:
 	sqlc generate
+
+# 開発環境でSQLCコードを生成（Docker内で実行）
+sqlc-generate-docker:
+	docker-compose exec app sqlc generate
 
 # oapi-codegenでAPIコードを生成
 generate-api:

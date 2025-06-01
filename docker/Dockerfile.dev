@@ -1,0 +1,20 @@
+# 開発用Dockerfile（ホットリロード対応）
+FROM golang:1.23.5-alpine AS dev
+
+# 必要なパッケージをインストール
+RUN apk add --no-cache git
+
+# Airをインストール（Go 1.23対応バージョン）
+RUN go install github.com/cosmtrek/air@v1.49.0
+
+WORKDIR /app
+
+# Go modules関連のファイルをコピー
+COPY go.mod go.sum ./
+RUN go mod download
+
+# 開発環境用の設定
+EXPOSE 8080
+
+# Airでホットリロードを実行
+CMD ["air", "-c", ".air.toml"]

@@ -44,9 +44,9 @@ func main() {
 	port := getEnv("PORT", "8080")
 	addr := fmt.Sprintf(":%s", port)
 
-	log.Printf("Server starting on port %s", port)
-	log.Printf("Health check available at http://localhost:%s/health", port)
-	log.Printf("Corporations API available at http://localhost:%s/corporations", port)
+	log.Printf("🚀 Development server starting on port %s with hot reload", port)
+	log.Printf("✅ Health check available at http://localhost:%s/health", port)
+	log.Printf("🏢 Corporations API available at http://localhost:%s/corporations", port)
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}

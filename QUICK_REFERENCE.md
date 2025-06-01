@@ -35,7 +35,7 @@
 ### 基本セットアップ
 ```bash
 # 依存関係インストール・ビルド
-make docker-build
+make docker-run
 
 # 開発環境起動
 make docker-run
@@ -50,13 +50,13 @@ make batch-run
 ### コード生成
 ```bash
 # OpenAPI バンドル生成
-make bundle-openapi
+make openapi-bundle
 
 # API コード生成
 make generate-api
 
 # SQLC コード生成  
-make generate-sqlc
+make sqlc-generate
 
 # 全生成（推奨）
 make generate-all
@@ -70,7 +70,7 @@ docker system prune -af
 
 # SQLC クリーンアップ
 rm -rf internal/infrastructure/db/*.sql.go
-make generate-sqlc
+make sqlc-generate
 
 # 依存関係更新
 go mod tidy

@@ -125,16 +125,16 @@ make download-data-docker
 
 ```bash
 # ダウンロードしたZIPファイルをインポート
-docker-compose run --rm import \
-  -zip-file /data/gbiz_latest.zip
+docker-compose run --rm import ./import \
+  -input /data/gbiz_latest.zip
 
 # または、特定のタイムスタンプ付きファイルをインポート
-docker-compose run --rm import \
-  -zip-file /data/gbiz_20241231_120000.zip
+docker-compose run --rm import ./import \
+  -input /data/gbiz_20241231_120000.zip
 
 # dry-runでインポート内容を事前確認（推奨）
-docker-compose run --rm import \
-  -zip-file /data/gbiz_latest.zip \
+docker-compose run --rm import ./import \
+  -input /data/gbiz_latest.zip \
   -dry-run
 ```
 
@@ -304,7 +304,7 @@ docker-compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FR
 docker-compose logs import
 
 # dry-runで事前確認
-docker-compose run --rm import -zip-file /data/gbiz_latest.zip -dry-run
+docker-compose run --rm import ./import -input /data/gbiz_latest.zip -dry-run
 
 # データベースの現在の状態確認
 docker-compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM corporations WHERE prefecture_code IS NOT NULL;"
@@ -348,7 +348,7 @@ docker-compose run --rm download -output "/data/$FILENAME"
 
 # 3. データをインポート
 echo "Importing data..."
-docker-compose run --rm import -zip-file "/data/$FILENAME"
+docker-compose run --rm import ./import -input "/data/$FILENAME"
 
 # 4. APIサーバー起動
 echo "Starting API server..."

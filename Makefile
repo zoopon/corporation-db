@@ -175,7 +175,7 @@ import-data: import-build
 import-data-docker:
 	@echo "Importing data from ZIP file using Docker..."
 	@read -p "Enter ZIP file path (relative to ./data/): " zipfile; \
-	docker-compose run --rm import ./import -zip-file "/data/$$zipfile"
+	docker-compose run --rm import ./import -input "/data/$$zipfile"
 
 # Database operations
 db-reset:

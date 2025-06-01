@@ -4,10 +4,10 @@ info:
   description: Corporation management API
   version: 1.0.0
 servers:
-  - url: http://localhost:8080
-    description: Local server
   - url: http://34.146.226.48
     description: Development server
+  - url: http://localhost:8080
+    description: Local server
 
 paths:
   /health:

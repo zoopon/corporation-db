@@ -35,11 +35,7 @@ func (r *CorporationRepository) GetAll(ctx context.Context) ([]*domain.Corporati
 
 	corporations := make([]*domain.Corporation, len(dbCorporations))
 	for i, dbCorp := range dbCorporations {
-		corp, err := r.dbToDomainCorporation(&dbCorp)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert corporation %d: %w", dbCorp.ID, err)
-		}
-		corporations[i] = corp
+		corporations[i] = r.convertToDomain(&dbCorp)
 	}
 
 	return corporations, nil
@@ -98,11 +94,7 @@ func (r *CorporationRepository) GetWithFilter(ctx context.Context, filter domain
 
 	corporations := make([]*domain.Corporation, len(dbCorporations))
 	for i, dbCorp := range dbCorporations {
-		corp, err := r.dbToDomainCorporation(&dbCorp)
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to convert corporation %d: %w", dbCorp.ID, err)
-		}
-		corporations[i] = corp
+		corporations[i] = r.convertToDomain(&dbCorp)
 	}
 
 	return corporations, total, nil
@@ -118,7 +110,7 @@ func (r *CorporationRepository) GetByID(ctx context.Context, id int64) (*domain.
 		return nil, fmt.Errorf("failed to get corporation by ID: %w", err)
 	}
 
-	return r.dbToDomainCorporation(&dbCorp)
+	return r.convertToDomain(&dbCorp), nil
 }
 
 // GetByCorporateNumber retrieves a corporation by corporate number
@@ -131,7 +123,7 @@ func (r *CorporationRepository) GetByCorporateNumber(ctx context.Context, corpor
 		return nil, fmt.Errorf("failed to get corporation by corporate number: %w", err)
 	}
 
-	return r.dbToDomainCorporation(&dbCorp)
+	return r.convertToDomain(&dbCorp), nil
 }
 
 // BulkUpsert performs bulk upsert of corporations with transaction commits every 1000 records
@@ -168,6 +160,7 @@ func (r *CorporationRepository) BulkUpsert(ctx context.Context, corporations []*
 				Name:                   corp.Name,
 				Kana:                   r.stringToNullString(corp.Kana),
 				NameEn:                 r.stringToNullString(corp.NameEn),
+				SearchName:             r.stringToNullString(corp.SearchName),
 				PostalCode:             r.stringToNullString(corp.PostalCode),
 				Location:               r.stringToNullString(corp.Location),
 				PrefectureCode:         r.stringToNullString(corp.PrefectureCode),
@@ -210,14 +203,15 @@ func (r *CorporationRepository) BulkUpsert(ctx context.Context, corporations []*
 	return nil
 }
 
-// Helper function to convert database Corporation to domain Corporation
-func (r *CorporationRepository) dbToDomainCorporation(dbCorp *db.Corporation) (*domain.Corporation, error) {
-	corp := &domain.Corporation{
+// convertToDomain converts a db.Corporation to domain.Corporation
+func (r *CorporationRepository) convertToDomain(dbCorp *db.Corporation) *domain.Corporation {
+	return &domain.Corporation{
 		ID:              int64(dbCorp.ID),
 		CorporateNumber: dbCorp.CorporateNumber,
 		Name:            dbCorp.Name,
 		Kana:            r.nullStringToString(dbCorp.Kana),
 		NameEn:          r.nullStringToString(dbCorp.NameEn),
+		SearchName:      r.nullStringToString(dbCorp.SearchName),
 		PostalCode:      r.nullStringToString(dbCorp.PostalCode),
 		Location:        r.nullStringToString(dbCorp.Location),
 		PrefectureCode:  r.nullStringToString(dbCorp.PrefectureCode),
@@ -253,8 +247,6 @@ func (r *CorporationRepository) dbToDomainCorporation(dbCorp *db.Corporation) (*
 		CreatedAt: r.nullTimeToTimeValue(dbCorp.CreatedAt),
 		UpdatedAt: r.nullTimeToTimeValue(dbCorp.UpdatedAt),
 	}
-
-	return corp, nil
 }
 
 // Helper functions for null type conversions

@@ -21,6 +21,7 @@ type Corporation struct {
 	Name            string  `json:"name"`                      // name (法人名)
 	Kana            *string `json:"kana,omitempty"`            // kana (法人名ふりがな)
 	NameEn          *string `json:"name_en,omitempty"`         // name_en (英語法人名)
+	SearchName      *string `json:"search_name,omitempty"`     // search_name (検索用正規化名)
 	PostalCode      *string `json:"postal_code,omitempty"`     // postal_code (郵便番号)
 	Location        *string `json:"location,omitempty"`        // location (所在地)
 	PrefectureCode  *string `json:"prefecture_code,omitempty"` // prefecture_code (都道府県コード)
@@ -63,6 +64,7 @@ type CreateCorporationRequest struct {
 	Name                   string     `json:"name" validate:"required"`
 	Kana                   *string    `json:"kana,omitempty"`
 	NameEn                 *string    `json:"name_en,omitempty"`
+	SearchName             *string    `json:"search_name,omitempty"`
 	PostalCode             *string    `json:"postal_code,omitempty"`
 	Location               *string    `json:"location,omitempty"`
 	PrefectureCode         *string    `json:"prefecture_code,omitempty"`

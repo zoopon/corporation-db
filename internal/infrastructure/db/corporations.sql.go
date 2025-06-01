@@ -15,7 +15,7 @@ SELECT COUNT(*)
 FROM corporations 
 WHERE ($1 = '' OR corporate_number = $1)
   AND ($2 = '' OR (
-    name ILIKE '%' || $2 || '%' OR 
+    search_name ILIKE '%' || $2 || '%' OR 
     kana ILIKE '%' || $2 || '%' OR 
     name_en ILIKE '%' || $2 || '%'
   ))
@@ -47,15 +47,15 @@ func (q *Queries) CountCorporationsWithFilter(ctx context.Context, arg CountCorp
 
 const createCorporation = `-- name: CreateCorporation :one
 INSERT INTO corporations (
-    corporate_number, name, kana, name_en, postal_code, location, prefecture_code,
+    corporate_number, name, kana, name_en, search_name, postal_code, location, prefecture_code,
     status, close_date, close_cause, representative_name, representative_position,
     date_of_establishment, founding_year, capital_stock, employee_number,
     company_size_male, company_size_female, business_items, business_summary,
     company_url, qualification_grade, number_of_activity, update_date
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
 )
-RETURNING id, corporate_number, name, kana, name_en, postal_code, location, 
+RETURNING id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
           prefecture_code, status, close_date, close_cause, representative_name, representative_position,
           date_of_establishment, founding_year, capital_stock, employee_number,
           company_size_male, company_size_female, business_items, business_summary,
@@ -68,6 +68,7 @@ type CreateCorporationParams struct {
 	Name                   string         `json:"name"`
 	Kana                   sql.NullString `json:"kana"`
 	NameEn                 sql.NullString `json:"name_en"`
+	SearchName             sql.NullString `json:"search_name"`
 	PostalCode             sql.NullString `json:"postal_code"`
 	Location               sql.NullString `json:"location"`
 	PrefectureCode         sql.NullString `json:"prefecture_code"`
@@ -96,6 +97,7 @@ func (q *Queries) CreateCorporation(ctx context.Context, arg CreateCorporationPa
 		arg.Name,
 		arg.Kana,
 		arg.NameEn,
+		arg.SearchName,
 		arg.PostalCode,
 		arg.Location,
 		arg.PrefectureCode,
@@ -124,6 +126,7 @@ func (q *Queries) CreateCorporation(ctx context.Context, arg CreateCorporationPa
 		&i.Name,
 		&i.Kana,
 		&i.NameEn,
+		&i.SearchName,
 		&i.PostalCode,
 		&i.Location,
 		&i.PrefectureCode,
@@ -171,7 +174,7 @@ func (q *Queries) DeleteCorporationByCorporateNumber(ctx context.Context, corpor
 }
 
 const getCorporationByCorporateNumber = `-- name: GetCorporationByCorporateNumber :one
-SELECT id, corporate_number, name, kana, name_en, postal_code, location, 
+SELECT id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
        prefecture_code, status, close_date, close_cause, representative_name, representative_position,
        date_of_establishment, founding_year, capital_stock, employee_number,
        company_size_male, company_size_female, business_items, business_summary,
@@ -190,6 +193,7 @@ func (q *Queries) GetCorporationByCorporateNumber(ctx context.Context, corporate
 		&i.Name,
 		&i.Kana,
 		&i.NameEn,
+		&i.SearchName,
 		&i.PostalCode,
 		&i.Location,
 		&i.PrefectureCode,
@@ -217,7 +221,7 @@ func (q *Queries) GetCorporationByCorporateNumber(ctx context.Context, corporate
 }
 
 const getCorporationByID = `-- name: GetCorporationByID :one
-SELECT id, corporate_number, name, kana, name_en, postal_code, location, 
+SELECT id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
        prefecture_code, status, close_date, close_cause, representative_name, representative_position,
        date_of_establishment, founding_year, capital_stock, employee_number,
        company_size_male, company_size_female, business_items, business_summary,
@@ -236,6 +240,7 @@ func (q *Queries) GetCorporationByID(ctx context.Context, id int32) (Corporation
 		&i.Name,
 		&i.Kana,
 		&i.NameEn,
+		&i.SearchName,
 		&i.PostalCode,
 		&i.Location,
 		&i.PrefectureCode,
@@ -264,7 +269,7 @@ func (q *Queries) GetCorporationByID(ctx context.Context, id int32) (Corporation
 
 const getCorporations = `-- name: GetCorporations :many
 
-SELECT id, corporate_number, name, kana, name_en, postal_code, location, 
+SELECT id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
        prefecture_code, status, close_date, close_cause, representative_name, representative_position,
        date_of_establishment, founding_year, capital_stock, employee_number,
        company_size_male, company_size_female, business_items, business_summary,
@@ -290,6 +295,7 @@ func (q *Queries) GetCorporations(ctx context.Context) ([]Corporation, error) {
 			&i.Name,
 			&i.Kana,
 			&i.NameEn,
+			&i.SearchName,
 			&i.PostalCode,
 			&i.Location,
 			&i.PrefectureCode,
@@ -327,7 +333,7 @@ func (q *Queries) GetCorporations(ctx context.Context) ([]Corporation, error) {
 }
 
 const getCorporationsWithFilter = `-- name: GetCorporationsWithFilter :many
-SELECT id, corporate_number, name, kana, name_en, postal_code, location, 
+SELECT id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
        prefecture_code, status, close_date, close_cause, representative_name, representative_position,
        date_of_establishment, founding_year, capital_stock, employee_number,
        company_size_male, company_size_female, business_items, business_summary,
@@ -336,7 +342,7 @@ SELECT id, corporate_number, name, kana, name_en, postal_code, location,
 FROM corporations 
 WHERE ($1 = '' OR corporate_number = $1)
   AND ($2 = '' OR (
-    name ILIKE '%' || $2 || '%' OR 
+    search_name ILIKE '%' || $2 || '%' OR 
     kana ILIKE '%' || $2 || '%' OR 
     name_en ILIKE '%' || $2 || '%'
   ))
@@ -380,6 +386,7 @@ func (q *Queries) GetCorporationsWithFilter(ctx context.Context, arg GetCorporat
 			&i.Name,
 			&i.Kana,
 			&i.NameEn,
+			&i.SearchName,
 			&i.PostalCode,
 			&i.Location,
 			&i.PrefectureCode,
@@ -418,15 +425,15 @@ func (q *Queries) GetCorporationsWithFilter(ctx context.Context, arg GetCorporat
 
 const updateCorporation = `-- name: UpdateCorporation :one
 UPDATE corporations
-SET name = $2, kana = $3, name_en = $4, postal_code = $5, location = $6,
-    prefecture_code = $7, status = $8, close_date = $9, close_cause = $10, representative_name = $11,
-    representative_position = $12, date_of_establishment = $13, founding_year = $14,
-    capital_stock = $15, employee_number = $16, company_size_male = $17,
-    company_size_female = $18, business_items = $19, business_summary = $20,
-    company_url = $21, qualification_grade = $22, number_of_activity = $23,
-    update_date = $24, updated_at = NOW()
+SET name = $2, kana = $3, name_en = $4, search_name = $5, postal_code = $6, location = $7,
+    prefecture_code = $8, status = $9, close_date = $10, close_cause = $11, representative_name = $12,
+    representative_position = $13, date_of_establishment = $14, founding_year = $15,
+    capital_stock = $16, employee_number = $17, company_size_male = $18,
+    company_size_female = $19, business_items = $20, business_summary = $21,
+    company_url = $22, qualification_grade = $23, number_of_activity = $24,
+    update_date = $25, updated_at = NOW()
 WHERE id = $1
-RETURNING id, corporate_number, name, kana, name_en, postal_code, location, 
+RETURNING id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
           prefecture_code, status, close_date, close_cause, representative_name, representative_position,
           date_of_establishment, founding_year, capital_stock, employee_number,
           company_size_male, company_size_female, business_items, business_summary,
@@ -439,6 +446,7 @@ type UpdateCorporationParams struct {
 	Name                   string         `json:"name"`
 	Kana                   sql.NullString `json:"kana"`
 	NameEn                 sql.NullString `json:"name_en"`
+	SearchName             sql.NullString `json:"search_name"`
 	PostalCode             sql.NullString `json:"postal_code"`
 	Location               sql.NullString `json:"location"`
 	PrefectureCode         sql.NullString `json:"prefecture_code"`
@@ -467,6 +475,7 @@ func (q *Queries) UpdateCorporation(ctx context.Context, arg UpdateCorporationPa
 		arg.Name,
 		arg.Kana,
 		arg.NameEn,
+		arg.SearchName,
 		arg.PostalCode,
 		arg.Location,
 		arg.PrefectureCode,
@@ -495,6 +504,7 @@ func (q *Queries) UpdateCorporation(ctx context.Context, arg UpdateCorporationPa
 		&i.Name,
 		&i.Kana,
 		&i.NameEn,
+		&i.SearchName,
 		&i.PostalCode,
 		&i.Location,
 		&i.PrefectureCode,
@@ -523,19 +533,20 @@ func (q *Queries) UpdateCorporation(ctx context.Context, arg UpdateCorporationPa
 
 const upsertCorporation = `-- name: UpsertCorporation :one
 INSERT INTO corporations (
-    corporate_number, name, kana, name_en, postal_code, location, prefecture_code,
+    corporate_number, name, kana, name_en, search_name, postal_code, location, prefecture_code,
     status, close_date, close_cause, representative_name, representative_position,
     date_of_establishment, founding_year, capital_stock, employee_number,
     company_size_male, company_size_female, business_items, business_summary,
     company_url, qualification_grade, number_of_activity, update_date
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
 )
 ON CONFLICT (corporate_number)
 DO UPDATE SET
     name = EXCLUDED.name,
     kana = EXCLUDED.kana,
     name_en = EXCLUDED.name_en,
+    search_name = EXCLUDED.search_name,
     postal_code = EXCLUDED.postal_code,
     location = EXCLUDED.location,
     prefecture_code = EXCLUDED.prefecture_code,
@@ -557,7 +568,7 @@ DO UPDATE SET
     number_of_activity = EXCLUDED.number_of_activity,
     update_date = EXCLUDED.update_date,
     updated_at = NOW()
-RETURNING id, corporate_number, name, kana, name_en, postal_code, location, 
+RETURNING id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
           prefecture_code, status, close_date, close_cause, representative_name, representative_position,
           date_of_establishment, founding_year, capital_stock, employee_number,
           company_size_male, company_size_female, business_items, business_summary,
@@ -570,6 +581,7 @@ type UpsertCorporationParams struct {
 	Name                   string         `json:"name"`
 	Kana                   sql.NullString `json:"kana"`
 	NameEn                 sql.NullString `json:"name_en"`
+	SearchName             sql.NullString `json:"search_name"`
 	PostalCode             sql.NullString `json:"postal_code"`
 	Location               sql.NullString `json:"location"`
 	PrefectureCode         sql.NullString `json:"prefecture_code"`
@@ -598,6 +610,7 @@ func (q *Queries) UpsertCorporation(ctx context.Context, arg UpsertCorporationPa
 		arg.Name,
 		arg.Kana,
 		arg.NameEn,
+		arg.SearchName,
 		arg.PostalCode,
 		arg.Location,
 		arg.PrefectureCode,
@@ -626,6 +639,7 @@ func (q *Queries) UpsertCorporation(ctx context.Context, arg UpsertCorporationPa
 		&i.Name,
 		&i.Kana,
 		&i.NameEn,
+		&i.SearchName,
 		&i.PostalCode,
 		&i.Location,
 		&i.PrefectureCode,

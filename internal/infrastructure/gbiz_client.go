@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"corporation-db/internal/domain"
+	"corporation-db/internal/utils"
 )
 
 // prefectureCodeMap maps prefecture names to JIS X 0401 codes
@@ -127,8 +128,9 @@ var cityCodeMap = map[string]string{
 
 // GBizClient handles communication with gBizINFO API
 type GBizClient struct {
-	httpClient *http.Client
-	baseURL    string
+	httpClient    *http.Client
+	baseURL       string
+	textConverter *utils.TextConverter
 }
 
 // NewGBizClient creates a new gBizINFO client
@@ -137,7 +139,8 @@ func NewGBizClient() *GBizClient {
 		httpClient: &http.Client{
 			Timeout: 30 * time.Minute, // Large files need longer timeout
 		},
-		baseURL: "https://info.gbiz.go.jp",
+		baseURL:       "https://info.gbiz.go.jp",
+		textConverter: utils.NewTextConverter(),
 	}
 }
 
@@ -367,6 +370,10 @@ func (c *GBizClient) parseCSVRecord(headers []string, record []string) (*domain.
 		Name:            name,
 		Status:          "01", // Default status code (matches gBizINFO API)
 	}
+
+	// Generate search_name using text converter
+	searchName := c.textConverter.NormalizeForSearch(name)
+	corp.SearchName = &searchName
 
 	// Map CSV fields to gBizINFO API structure
 

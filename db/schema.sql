@@ -10,6 +10,7 @@ CREATE TABLE corporations (
     name VARCHAR(500) NOT NULL,                          -- name
     kana VARCHAR(500),                                   -- kana (法人名ふりがな)
     name_en VARCHAR(500),                                -- name_en (英語法人名)
+    search_name VARCHAR(500),                            -- search_name (検索用正規化された名前)
     postal_code VARCHAR(10),                             -- postal_code
     location TEXT,                                       -- location (所在地)
     prefecture_code VARCHAR(2),                          -- prefecture_code (都道府県コード)
@@ -50,6 +51,7 @@ CREATE TABLE corporations (
 CREATE INDEX idx_corporations_corporate_number ON corporations(corporate_number);
 CREATE INDEX idx_corporations_name ON corporations(name);
 CREATE INDEX idx_corporations_kana ON corporations(kana);
+CREATE INDEX idx_corporations_search_name ON corporations(search_name);
 CREATE INDEX idx_corporations_status ON corporations(status);
 CREATE INDEX idx_corporations_location ON corporations(location);
 CREATE INDEX idx_corporations_prefecture_code ON corporations(prefecture_code);

@@ -14,6 +14,7 @@ type Corporation struct {
 	Name                   string         `json:"name"`
 	Kana                   sql.NullString `json:"kana"`
 	NameEn                 sql.NullString `json:"name_en"`
+	SearchName             sql.NullString `json:"search_name"`
 	PostalCode             sql.NullString `json:"postal_code"`
 	Location               sql.NullString `json:"location"`
 	PrefectureCode         sql.NullString `json:"prefecture_code"`

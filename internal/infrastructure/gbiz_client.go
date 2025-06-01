@@ -409,10 +409,8 @@ func (c *GBizClient) parseCSVRecord(headers []string, record []string) (*domain.
 
 	// Registration Information
 	if val, exists := fieldMap["登記記録の閉鎖等年月日"]; exists && val != "" {
-		if date, err := time.Parse("2006-01-02", val); err == nil {
-			corp.CloseDate = &date
-		} else if date, err := time.Parse("2006/01/02", val); err == nil {
-			corp.CloseDate = &date
+		if date, err := parseDate(val); err == nil && date != nil {
+			corp.CloseDate = date
 		}
 	}
 
@@ -435,10 +433,8 @@ func (c *GBizClient) parseCSVRecord(headers []string, record []string) (*domain.
 
 	// Company Details
 	if val, exists := fieldMap["設立年月日"]; exists && val != "" {
-		if date, err := time.Parse("2006-01-02", val); err == nil {
-			corp.DateOfEstablishment = &date
-		} else if date, err := time.Parse("2006/01/02", val); err == nil {
-			corp.DateOfEstablishment = &date
+		if date, err := parseDate(val); err == nil && date != nil {
+			corp.DateOfEstablishment = date
 		}
 	}
 
@@ -507,25 +503,37 @@ func (c *GBizClient) parseCSVRecord(headers []string, record []string) (*domain.
 		}
 	}
 
-	// Parse date fields
-	if val, exists := fieldMap["設立年月日"]; exists && val != "" {
-		if date, err := time.Parse("2006-01-02", val); err == nil {
-			corp.DateOfEstablishment = &date
-		} else if date, err := time.Parse("2006/01/02", val); err == nil {
-			corp.DateOfEstablishment = &date
-		}
-	}
-
 	// gBizINFO Metadata
 	if val, exists := fieldMap["最終更新日"]; exists && val != "" {
-		if date, err := time.Parse("2006-01-02", val); err == nil {
-			corp.UpdateDate = &date
-		} else if date, err := time.Parse("2006/01/02", val); err == nil {
-			corp.UpdateDate = &date
+		if date, err := parseDate(val); err == nil && date != nil {
+			corp.UpdateDate = date
 		}
 	}
 
 	return corp, nil
+}
+
+// parseDate attempts to parse date string in multiple formats commonly used in CSV
+func parseDate(dateStr string) (*time.Time, error) {
+	if dateStr == "" {
+		return nil, nil
+	}
+
+	// List of supported date formats
+	formats := []string{
+		"2006-01-02",                // YYYY-MM-DD
+		"2006/01/02",                // YYYY/MM/DD
+		"2006-01-02T15:04:05Z07:00", // RFC3339 with timezone (e.g., 2020-12-02T00:00:00+09:00)
+		time.RFC3339,                // Standard RFC3339
+	}
+
+	for _, format := range formats {
+		if date, err := time.Parse(format, dateStr); err == nil {
+			return &date, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to parse date: %s", dateStr)
 }
 
 // Cleanup removes temporary files

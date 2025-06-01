@@ -3,6 +3,7 @@ package infrastructure
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestExtractPrefectureCode(t *testing.T) {
@@ -295,6 +296,219 @@ func TestParseCSVWithPrefectureCodeExtraction(t *testing.T) {
 				prefCode = *corp.PrefectureCode
 			}
 			t.Errorf("Corporation %d: PrefectureCode = %q; want %q", i, prefCode, tc.expectedPrefCode)
+		}
+	}
+}
+
+func TestParseDate(t *testing.T) {
+	tests := []struct {
+		name        string
+		dateStr     string
+		expectError bool
+		expected    string // Expected output in RFC3339 format for comparison
+	}{
+		{
+			name:        "YYYY-MM-DD format",
+			dateStr:     "2020-12-02",
+			expectError: false,
+			expected:    "2020-12-02T00:00:00Z",
+		},
+		{
+			name:        "YYYY/MM/DD format",
+			dateStr:     "2020/12/02",
+			expectError: false,
+			expected:    "2020-12-02T00:00:00Z",
+		},
+		{
+			name:        "RFC3339 with timezone +09:00",
+			dateStr:     "2020-12-02T00:00:00+09:00",
+			expectError: false,
+			expected:    "2020-12-01T15:00:00Z", // Converted to UTC
+		},
+		{
+			name:        "RFC3339 UTC format",
+			dateStr:     "2020-12-02T15:30:45Z",
+			expectError: false,
+			expected:    "2020-12-02T15:30:45Z",
+		},
+		{
+			name:        "Standard RFC3339 format",
+			dateStr:     "2021-06-15T10:30:00+05:30",
+			expectError: false,
+			expected:    "2021-06-15T05:00:00Z", // Converted to UTC
+		},
+		{
+			name:        "Empty string",
+			dateStr:     "",
+			expectError: false,
+			expected:    "", // Should return nil
+		},
+		{
+			name:        "Invalid date format",
+			dateStr:     "invalid-date",
+			expectError: true,
+			expected:    "",
+		},
+		{
+			name:        "Partial date",
+			dateStr:     "2020-12",
+			expectError: true,
+			expected:    "",
+		},
+		{
+			name:        "Wrong format",
+			dateStr:     "12/02/2020",
+			expectError: true,
+			expected:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseDate(tt.dateStr)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("parseDate(%q) expected error, but got none", tt.dateStr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("parseDate(%q) unexpected error: %v", tt.dateStr, err)
+				return
+			}
+
+			if tt.dateStr == "" {
+				if result != nil {
+					t.Errorf("parseDate(%q) expected nil, but got %v", tt.dateStr, result)
+				}
+				return
+			}
+
+			if result == nil {
+				t.Errorf("parseDate(%q) returned nil when expecting valid date", tt.dateStr)
+				return
+			}
+
+			// Convert to UTC for comparison
+			actualUTC := result.UTC().Format(time.RFC3339)
+			if actualUTC != tt.expected {
+				t.Errorf("parseDate(%q) = %q; want %q", tt.dateStr, actualUTC, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseCSVWithDateParsing(t *testing.T) {
+	// テスト用のCSVデータ（RFC3339形式の日付を含む）
+	csvData := `法人番号,法人名,法人名ふりがな,法人名英語,郵便番号,本社所在地,ステータス,登記記録の閉鎖等年月日,登記記録の閉鎖等の事由,法人代表者名,法人代表者役職,資本金,従業員数,企業規模詳細(男性),企業規模詳細(女性),営業品目リスト,事業概要,企業ホームページ,設立年月日,創業年,最終更新日,資格等級
+1234567890123,テスト株式会社1,テストカブシキガイシャ1,Test Corporation 1,100-0001,東京都新宿区西新宿2-8-1,01,2020-12-02T00:00:00+09:00,,田中太郎,代表取締役,10000000,100,60,40,情報通信業,IT関連事業,https://test1.co.jp,2020-01-01,2020,2025-05-31T10:30:00+09:00,
+2345678901234,テスト株式会社2,テストカブシキガイシャ2,Test Corporation 2,530-0001,大阪府大阪市北区梅田1-1,01,,,山田花子,代表取締役,5000000,50,30,20,製造業,製品製造業,https://test2.co.jp,2019/06/15,2019,2025-06-01,
+3456789012345,テスト株式会社3,テストカブシキガイシャ3,Test Corporation 3,450-0002,愛知県名古屋市中村区名駅1-1,01,,,佐藤次郎,代表取締役,8000000,80,50,30,卸売業,商品卸売業,https://test3.co.jp,2018-03-20T09:00:00Z,2018,2025-05-30T00:00:00+09:00,`
+
+	client := &GBizClient{}
+	reader := strings.NewReader(csvData)
+
+	corporations, err := client.parseCSV(reader)
+	if err != nil {
+		t.Fatalf("parseCSV() error = %v", err)
+	}
+
+	if len(corporations) != 3 {
+		t.Fatalf("Expected 3 corporations, got %d", len(corporations))
+	}
+
+	// Test cases with expected date parsing
+	testCases := []struct {
+		corporateNumber       string
+		expectedName          string
+		hasCloseDate          bool
+		hasEstablishDate      bool
+		hasUpdateDate         bool
+		expectedCloseDateUTC  string
+		expectedEstabDateUTC  string
+		expectedUpdateDateUTC string
+	}{
+		{
+			corporateNumber:       "1234567890123",
+			expectedName:          "テスト株式会社1",
+			hasCloseDate:          true,
+			hasEstablishDate:      true,
+			hasUpdateDate:         true,
+			expectedCloseDateUTC:  "2020-12-01T15:00:00Z", // +09:00 converted to UTC
+			expectedEstabDateUTC:  "2020-01-01T00:00:00Z",
+			expectedUpdateDateUTC: "2025-05-31T01:30:00Z", // +09:00 converted to UTC
+		},
+		{
+			corporateNumber:       "2345678901234",
+			expectedName:          "テスト株式会社2",
+			hasCloseDate:          false,
+			hasEstablishDate:      true,
+			hasUpdateDate:         true,
+			expectedEstabDateUTC:  "2019-06-15T00:00:00Z", // YYYY/MM/DD format
+			expectedUpdateDateUTC: "2025-06-01T00:00:00Z", // YYYY-MM-DD format
+		},
+		{
+			corporateNumber:       "3456789012345",
+			expectedName:          "テスト株式会社3",
+			hasCloseDate:          false,
+			hasEstablishDate:      true,
+			hasUpdateDate:         true,
+			expectedEstabDateUTC:  "2018-03-20T09:00:00Z", // RFC3339 UTC format
+			expectedUpdateDateUTC: "2025-05-29T15:00:00Z", // +09:00 converted to UTC
+		},
+	}
+
+	for i, tc := range testCases {
+		corp := corporations[i]
+
+		if corp.CorporateNumber != tc.corporateNumber {
+			t.Errorf("Corporation %d: CorporateNumber = %q; want %q", i, corp.CorporateNumber, tc.corporateNumber)
+		}
+
+		if corp.Name != tc.expectedName {
+			t.Errorf("Corporation %d: Name = %q; want %q", i, corp.Name, tc.expectedName)
+		}
+
+		// Test CloseDate parsing
+		if tc.hasCloseDate {
+			if corp.CloseDate == nil {
+				t.Errorf("Corporation %d: CloseDate is nil, expected valid date", i)
+			} else {
+				actualUTC := corp.CloseDate.UTC().Format(time.RFC3339)
+				if actualUTC != tc.expectedCloseDateUTC {
+					t.Errorf("Corporation %d: CloseDate UTC = %q; want %q", i, actualUTC, tc.expectedCloseDateUTC)
+				}
+			}
+		} else {
+			if corp.CloseDate != nil {
+				t.Errorf("Corporation %d: CloseDate should be nil, got %v", i, corp.CloseDate)
+			}
+		}
+
+		// Test DateOfEstablishment parsing
+		if tc.hasEstablishDate {
+			if corp.DateOfEstablishment == nil {
+				t.Errorf("Corporation %d: DateOfEstablishment is nil, expected valid date", i)
+			} else {
+				actualUTC := corp.DateOfEstablishment.UTC().Format(time.RFC3339)
+				if actualUTC != tc.expectedEstabDateUTC {
+					t.Errorf("Corporation %d: DateOfEstablishment UTC = %q; want %q", i, actualUTC, tc.expectedEstabDateUTC)
+				}
+			}
+		}
+
+		// Test UpdateDate parsing
+		if tc.hasUpdateDate {
+			if corp.UpdateDate == nil {
+				t.Errorf("Corporation %d: UpdateDate is nil, expected valid date", i)
+			} else {
+				actualUTC := corp.UpdateDate.UTC().Format(time.RFC3339)
+				if actualUTC != tc.expectedUpdateDateUTC {
+					t.Errorf("Corporation %d: UpdateDate UTC = %q; want %q", i, actualUTC, tc.expectedUpdateDateUTC)
+				}
+			}
 		}
 	}
 }

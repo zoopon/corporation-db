@@ -98,21 +98,27 @@ services:
   import:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-      target: import
+      dockerfile: docker/Dockerfile.dev
+      target: dev
     environment:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=postgres
       - DB_PASSWORD=password
       - DB_NAME=corporation_db
+      - GO_ENV=development
     volumes:
+      - .:/app
       - ./data:/data
+      - /app/bin
+      - /app/tmp
+    working_dir: /app
     depends_on:
       db:
         condition: service_healthy
     profiles:
       - data
+    command: ["go", "run", "./cmd/import", "-input", "/data/input.zip"]
 
 volumes:
   postgres_data:

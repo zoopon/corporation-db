@@ -134,23 +134,16 @@ func (r *CorporationRepository) GetByCorporateNumber(ctx context.Context, corpor
 	return r.dbToDomainCorporation(&dbCorp)
 }
 
-// BulkUpsert performs bulk upsert of corporations
+// BulkUpsert performs bulk upsert of corporations with transaction commits every 1000 records
 func (r *CorporationRepository) BulkUpsert(ctx context.Context, corporations []*domain.CreateCorporationRequest) error {
 	if len(corporations) == 0 {
 		return nil
 	}
 
-	// Use transaction for bulk operations
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	txQueries := r.queries.WithTx(tx)
-
-	// Process corporations in batches to avoid memory issues
+	// Process corporations in batches with individual transactions for each batch
 	batchSize := 1000
+	totalBatches := (len(corporations) + batchSize - 1) / batchSize
+
 	for i := 0; i < len(corporations); i += batchSize {
 		end := i + batchSize
 		if end > len(corporations) {
@@ -158,7 +151,17 @@ func (r *CorporationRepository) BulkUpsert(ctx context.Context, corporations []*
 		}
 
 		batch := corporations[i:end]
+		batchNum := i/batchSize + 1
 
+		// Start new transaction for this batch
+		tx, err := r.db.BeginTx(ctx, nil)
+		if err != nil {
+			return fmt.Errorf("failed to begin transaction for batch %d: %w", batchNum, err)
+		}
+
+		txQueries := r.queries.WithTx(tx)
+
+		// Process all records in this batch
 		for j, corp := range batch {
 			params := db.UpsertCorporationParams{
 				CorporateNumber:        corp.CorporateNumber,
@@ -189,20 +192,21 @@ func (r *CorporationRepository) BulkUpsert(ctx context.Context, corporations []*
 
 			_, err := txQueries.UpsertCorporation(ctx, params)
 			if err != nil {
+				tx.Rollback()
 				return fmt.Errorf("failed to upsert corporation %s (batch %d, item %d): %w",
-					corp.CorporateNumber, i/batchSize+1, j+1, err)
+					corp.CorporateNumber, batchNum, j+1, err)
 			}
 		}
 
-		fmt.Printf("Processed batch %d/%d (%d corporations)\n",
-			i/batchSize+1, (len(corporations)+batchSize-1)/batchSize, len(batch))
+		// Commit this batch
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("failed to commit transaction for batch %d: %w", batchNum, err)
+		}
+
+		fmt.Printf("Committed batch %d/%d (%d corporations)\n", batchNum, totalBatches, len(batch))
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	fmt.Printf("Successfully upserted %d corporations\n", len(corporations))
+	fmt.Printf("Successfully upserted %d corporations in %d committed transactions\n", len(corporations), totalBatches)
 	return nil
 }
 

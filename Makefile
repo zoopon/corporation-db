@@ -1,10 +1,12 @@
-.PHONY: help docker-run docker-up docker-down docker-dev docker-dev-up docker-dev-down docker-rebuild docker-rebuild-dev sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all db-reset db-reset-data db-status db-connect
+.PHONY: help docker-run docker-run-prod docker-up docker-up-prod docker-down docker-dev docker-dev-up docker-dev-down docker-rebuild docker-rebuild-dev sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all db-reset db-reset-data db-status db-connect
 
 # デフォルトターゲット
 help:
 	@echo "Available commands:"
-	@echo "  docker-run      - Start application with Docker (production)"
-	@echo "  docker-up       - Start Docker containers (production)"
+	@echo "  docker-run      - Start application with Docker (development, port 8080)"
+	@echo "  docker-run-prod - Start application with Docker (production, port 80)"
+	@echo "  docker-up       - Start Docker containers (development, background)"
+	@echo "  docker-up-prod  - Start Docker containers (production, port 80, background)"
 	@echo "  docker-down     - Stop Docker containers"
 	@echo "  docker-dev      - Start development environment with hot reload"
 	@echo "  docker-dev-up   - Start development containers"
@@ -58,9 +60,17 @@ help:
 docker-run:
 	docker compose up --build
 
+# Docker環境でアプリケーションを本番モード（80番ポート）で起動
+docker-run-prod:
+	PORT=80 docker compose up --build
+
 # Dockerコンテナを起動（バックグラウンド）
 docker-up:
 	docker compose up -d
+
+# Dockerコンテナを本番モード（80番ポート）でバックグラウンド起動
+docker-up-prod:
+	PORT=80 docker compose up -d
 
 # Dockerコンテナを停止
 docker-down:

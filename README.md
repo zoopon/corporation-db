@@ -50,6 +50,14 @@ Go言語で構築されたクリーンアーキテクチャベースのWebアプ
 - Docker & Docker Compose
 - Make (オプション)
 
+### 環境設定
+
+1. 環境変数設定ファイルをコピー
+```bash
+cp .env.example .env
+# 必要に応じて.envファイルを編集
+```
+
 ### アプリケーション起動
 
 1. リポジトリをクローン
@@ -59,13 +67,27 @@ cd corporation-db
 ```
 
 2. Docker環境でアプリケーションを起動
+
+**開発環境（8080番ポート）:**
 ```bash
 make docker-run
 # または
 docker compose up --build
 ```
 
-アプリケーションは http://localhost:8080 でアクセス可能になります。
+**本番環境（80番ポート）:**
+```bash
+# PORT環境変数でホストポートを指定（アプリは内部で8080番ポートのまま動作）
+PORT=80 docker compose up --build
+
+# または.envファイルで設定
+echo "PORT=80" > .env
+docker compose up --build
+```
+
+**アクセス方法:**
+- **開発環境:** http://localhost:8080 でアクセス可能  
+- **本番環境:** http://localhost でアクセス可能（80番ポート → 8080番ポートにマッピング）
 
 ## 📋 Docker-Compose 実行手順書
 

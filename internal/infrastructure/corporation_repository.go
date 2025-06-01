@@ -133,7 +133,8 @@ func (r *CorporationRepository) BulkUpsert(ctx context.Context, corporations []*
 	}
 
 	// Process corporations in batches with individual transactions for each batch
-	batchSize := 1000
+	// Reduced batch size for better memory efficiency on 4GB systems
+	batchSize := 500
 	totalBatches := (len(corporations) + batchSize - 1) / batchSize
 
 	for i := 0; i < len(corporations); i += batchSize {

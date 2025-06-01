@@ -231,7 +231,8 @@ func min(a, b int) int {
 	return b
 }
 
-// ExtractAndParseCSV extracts the ZIP file and parses the CSV content
+// ExtractAndParseCSV extracts the ZIP file and parses the CSV content (legacy method)
+// Deprecated: Use ExtractAndProcessCSVStream for memory-efficient processing
 func (c *GBizClient) ExtractAndParseCSV(zipPath string) ([]*domain.CreateCorporationRequest, error) {
 	// Open ZIP file
 	reader, err := zip.OpenReader(zipPath)
@@ -265,7 +266,42 @@ func (c *GBizClient) ExtractAndParseCSV(zipPath string) ([]*domain.CreateCorpora
 	return corporations, nil
 }
 
-// parseCSV parses CSV content and converts to Corporation entities
+// ExtractAndProcessCSVStream extracts the ZIP file and processes CSV content in streaming batches
+func (c *GBizClient) ExtractAndProcessCSVStream(zipPath string, batchProcessor func([]*domain.CreateCorporationRequest) error) (int, error) {
+	// Open ZIP file
+	reader, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to open ZIP file: %w", err)
+	}
+	defer reader.Close()
+
+	totalProcessed := 0
+
+	// Find and process CSV files in the ZIP
+	for _, file := range reader.File {
+		if strings.HasSuffix(strings.ToLower(file.Name), ".csv") {
+			fmt.Printf("Processing CSV file: %s\n", file.Name)
+
+			fileReader, err := file.Open()
+			if err != nil {
+				return totalProcessed, fmt.Errorf("failed to open CSV file %s: %w", file.Name, err)
+			}
+			defer fileReader.Close()
+
+			processed, err := c.parseCSVStream(fileReader, batchProcessor)
+			if err != nil {
+				return totalProcessed, fmt.Errorf("failed to process CSV file %s: %w", file.Name, err)
+			}
+
+			totalProcessed += processed
+		}
+	}
+
+	return totalProcessed, nil
+}
+
+// parseCSV parses CSV content and converts to Corporation entities (legacy method)
+// Deprecated: Use parseCSVStream for memory-efficient processing
 func (c *GBizClient) parseCSV(reader io.Reader) ([]*domain.CreateCorporationRequest, error) {
 	csvReader := csv.NewReader(reader)
 
@@ -322,6 +358,87 @@ func (c *GBizClient) parseCSV(reader io.Reader) ([]*domain.CreateCorporationRequ
 
 	fmt.Printf("Successfully parsed %d corporations from CSV\n", len(corporations))
 	return corporations, nil
+}
+
+// parseCSVStream parses CSV content in streaming batches to minimize memory usage
+func (c *GBizClient) parseCSVStream(reader io.Reader, batchProcessor func([]*domain.CreateCorporationRequest) error) (int, error) {
+	csvReader := csv.NewReader(reader)
+
+	// Configure CSV reader for gBizINFO format
+	csvReader.LazyQuotes = true    // Allow lazy quotes for malformed CSV
+	csvReader.FieldsPerRecord = -1 // Allow variable number of fields per record
+
+	// Read header
+	headers, err := csvReader.Read()
+	if err != nil {
+		return 0, fmt.Errorf("failed to read CSV header: %w", err)
+	}
+
+	fmt.Printf("CSV Headers: %v\n", headers)
+	fmt.Printf("Number of columns: %d\n", len(headers))
+
+	const batchSize = 500 // Reduced batch size for better memory efficiency on 4GB systems
+	batch := make([]*domain.CreateCorporationRequest, 0, batchSize)
+	lineNum := 1
+	totalProcessed := 0
+
+	for {
+		record, err := csvReader.Read()
+		if err == io.EOF {
+			// Process final batch if any records remain
+			if len(batch) > 0 {
+				if err := batchProcessor(batch); err != nil {
+					return totalProcessed, fmt.Errorf("failed to process final batch at line %d: %w", lineNum, err)
+				}
+				totalProcessed += len(batch)
+				fmt.Printf("Processed final batch of %d records (total: %d)\n", len(batch), totalProcessed)
+			}
+			break
+		}
+		if err != nil {
+			fmt.Printf("Warning: failed to read line %d: %v\n", lineNum, err)
+			lineNum++
+			continue
+		}
+
+		// Skip if not enough columns
+		if len(record) < 3 {
+			lineNum++
+			continue
+		}
+
+		corp, err := c.parseCSVRecord(headers, record)
+		if err != nil {
+			fmt.Printf("Warning: failed to parse line %d: %v\n", lineNum, err)
+			lineNum++
+			continue
+		}
+
+		if corp != nil {
+			batch = append(batch, corp)
+
+			// Process batch when it reaches the target size
+			if len(batch) >= batchSize {
+				if err := batchProcessor(batch); err != nil {
+					return totalProcessed, fmt.Errorf("failed to process batch at line %d: %w", lineNum, err)
+				}
+				totalProcessed += len(batch)
+				fmt.Printf("Processed batch of %d records (total: %d)\n", len(batch), totalProcessed)
+				
+				// Clear batch for next iteration (reuse slice to minimize allocations)
+				batch = batch[:0]
+			}
+		}
+		lineNum++
+
+		// Progress indicator for large files - reduced frequency to minimize I/O overhead
+		if lineNum%100000 == 0 {
+			fmt.Printf("Processed %d lines...\n", lineNum)
+		}
+	}
+
+	fmt.Printf("Successfully processed %d corporations from CSV\n", totalProcessed)
+	return totalProcessed, nil
 }
 
 // parseCSVRecord parses a single CSV record into Corporation (updated for gBizINFO API compliance)

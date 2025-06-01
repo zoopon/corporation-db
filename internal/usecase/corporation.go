@@ -63,43 +63,17 @@ func (u *CorporationUsecase) ImportFromGBizINFO(ctx context.Context) error {
 
 	log.Printf("Downloaded ZIP file: %s\n", zipPath)
 
-	// Extract and parse CSV
-	log.Println("Extracting and parsing CSV data...")
-	corporations, err := u.gbizClient.ExtractAndParseCSV(zipPath)
-	if err != nil {
-		return fmt.Errorf("failed to extract and parse CSV: %w", err)
-	}
-
-	log.Printf("Parsed %d corporations from CSV\n", len(corporations))
-
-	if len(corporations) == 0 {
-		log.Println("No corporations to import")
-		return nil
-	}
-
-	// Bulk upsert to database
-	log.Println("Starting bulk upsert to database...")
-	startTime := time.Now()
-
-	err = u.corporationRepo.BulkUpsert(ctx, corporations)
-	if err != nil {
-		return fmt.Errorf("failed to bulk upsert corporations: %w", err)
-	}
-
-	duration := time.Since(startTime)
-	log.Printf("Successfully imported %d corporations in %v\n", len(corporations), duration)
-	log.Printf("Average: %.2f corporations/second\n", float64(len(corporations))/duration.Seconds())
-
-	return nil
+	// Use streaming import for memory efficiency
+	return u.ImportFromZIPFileStream(ctx, zipPath, nil)
 }
 
-// ImportFromGBizINFOWithProgress downloads and imports corporation data with progress tracking
-func (u *CorporationUsecase) ImportFromGBizINFOWithProgress(ctx context.Context, progressCallback func(stage string, progress float64)) error {
+// ImportFromGBizINFOStream downloads and imports corporation data using streaming processing for memory efficiency
+func (u *CorporationUsecase) ImportFromGBizINFOStream(ctx context.Context, progressCallback func(stage string, progress float64)) error {
 	if progressCallback != nil {
 		progressCallback("Starting import", 0)
 	}
 
-	log.Println("Starting gBizINFO data import...")
+	log.Println("Starting gBizINFO data import with streaming...")
 
 	// Download CSV ZIP file
 	if progressCallback != nil {
@@ -119,54 +93,14 @@ func (u *CorporationUsecase) ImportFromGBizINFOWithProgress(ctx context.Context,
 
 	log.Printf("Downloaded ZIP file: %s\n", zipPath)
 
-	// Extract and parse CSV
-	if progressCallback != nil {
-		progressCallback("Parsing CSV data", 40)
-	}
+	// Use streaming import for memory efficiency
+	return u.ImportFromZIPFileStream(ctx, zipPath, progressCallback)
+}
 
-	log.Println("Extracting and parsing CSV data...")
-	corporations, err := u.gbizClient.ExtractAndParseCSV(zipPath)
-	if err != nil {
-		return fmt.Errorf("failed to extract and parse CSV: %w", err)
-	}
-
-	if progressCallback != nil {
-		progressCallback("CSV parsing completed", 70)
-	}
-
-	log.Printf("Parsed %d corporations from CSV\n", len(corporations))
-
-	if len(corporations) == 0 {
-		if progressCallback != nil {
-			progressCallback("No data to import", 100)
-		}
-		log.Println("No corporations to import")
-		return nil
-	}
-
-	// Bulk upsert to database
-	if progressCallback != nil {
-		progressCallback("Importing to database", 80)
-	}
-
-	log.Println("Starting bulk upsert to database...")
-	startTime := time.Now()
-
-	err = u.corporationRepo.BulkUpsert(ctx, corporations)
-	if err != nil {
-		return fmt.Errorf("failed to bulk upsert corporations: %w", err)
-	}
-
-	duration := time.Since(startTime)
-
-	if progressCallback != nil {
-		progressCallback("Import completed", 100)
-	}
-
-	log.Printf("Successfully imported %d corporations in %v\n", len(corporations), duration)
-	log.Printf("Average: %.2f corporations/second\n", float64(len(corporations))/duration.Seconds())
-
-	return nil
+// ImportFromGBizINFOWithProgress downloads and imports corporation data with progress tracking
+func (u *CorporationUsecase) ImportFromGBizINFOWithProgress(ctx context.Context, progressCallback func(stage string, progress float64)) error {
+	// Use the new streaming method for memory efficiency
+	return u.ImportFromGBizINFOStream(ctx, progressCallback)
 }
 
 // GetImportStats returns statistics about the import process
@@ -251,48 +185,64 @@ func (u *CorporationUsecase) ImportFromTestCSV(ctx context.Context, csvPath stri
 
 // ImportFromZIPFile imports corporation data from a ZIP file with progress tracking
 func (u *CorporationUsecase) ImportFromZIPFile(ctx context.Context, zipPath string, progressCallback func(stage string, progress float64)) error {
+	// Use the new streaming method for memory efficiency
+	return u.ImportFromZIPFileStream(ctx, zipPath, progressCallback)
+}
+
+// ImportFromZIPFileStream imports corporation data from a ZIP file using streaming processing for memory efficiency
+func (u *CorporationUsecase) ImportFromZIPFileStream(ctx context.Context, zipPath string, progressCallback func(stage string, progress float64)) error {
 	if progressCallback != nil {
 		progressCallback("Starting import", 0)
 	}
 
-	log.Printf("Starting import from ZIP file: %s", zipPath)
+	log.Printf("Starting streaming import from ZIP file: %s", zipPath)
 
-	// Extract and parse CSV
+	// Extract and process CSV in streaming batches
 	if progressCallback != nil {
-		progressCallback("Parsing CSV data", 10)
+		progressCallback("Processing CSV data", 10)
 	}
 
-	log.Println("Extracting and parsing CSV data...")
-	corporations, err := u.gbizClient.ExtractAndParseCSV(zipPath)
-	if err != nil {
-		return fmt.Errorf("failed to extract and parse CSV: %w", err)
-	}
+	log.Println("Extracting and processing CSV data in streaming batches...")
+	startTime := time.Now()
 
-	if progressCallback != nil {
-		progressCallback("CSV parsing completed", 50)
-	}
+	totalProcessed := 0
+	batchCount := 0
 
-	log.Printf("Parsed %d corporations from CSV", len(corporations))
+	// Define batch processor function
+	batchProcessor := func(batch []*domain.CreateCorporationRequest) error {
+		batchCount++
+		batchStartTime := time.Now()
 
-	if len(corporations) == 0 {
-		if progressCallback != nil {
-			progressCallback("No data to import", 100)
+		// Process this batch to database
+		err := u.corporationRepo.BulkUpsert(ctx, batch)
+		if err != nil {
+			return fmt.Errorf("failed to upsert batch %d: %w", batchCount, err)
 		}
-		log.Println("No corporations to import")
+
+		batchDuration := time.Since(batchStartTime)
+		totalProcessed += len(batch)
+
+		log.Printf("Processed batch %d: %d records in %v (total: %d)",
+			batchCount, len(batch), batchDuration, totalProcessed)
+
+		// Update progress based on processed records (rough estimate)
+		if progressCallback != nil {
+			// Progress from 10% to 90% during processing
+			// Use a more conservative estimate for large files
+			progress := 10.0 + (float64(totalProcessed)/5000000.0)*80.0 // Assume up to 5M records for progress calculation
+			if progress > 90.0 {
+				progress = 90.0
+			}
+			progressCallback("Processing batches", progress)
+		}
+
 		return nil
 	}
 
-	// Bulk upsert to database
-	if progressCallback != nil {
-		progressCallback("Importing to database", 60)
-	}
-
-	log.Println("Starting bulk upsert to database...")
-	startTime := time.Now()
-
-	err = u.corporationRepo.BulkUpsert(ctx, corporations)
+	// Use streaming CSV processing
+	processed, err := u.gbizClient.ExtractAndProcessCSVStream(zipPath, batchProcessor)
 	if err != nil {
-		return fmt.Errorf("failed to bulk upsert corporations: %w", err)
+		return fmt.Errorf("failed to extract and process CSV stream: %w", err)
 	}
 
 	duration := time.Since(startTime)
@@ -301,8 +251,14 @@ func (u *CorporationUsecase) ImportFromZIPFile(ctx context.Context, zipPath stri
 		progressCallback("Import completed", 100)
 	}
 
-	log.Printf("Successfully imported %d corporations in %v", len(corporations), duration)
-	log.Printf("Average: %.2f corporations/second", float64(len(corporations))/duration.Seconds())
+	if processed == 0 {
+		log.Println("No corporations to import")
+		return nil
+	}
+
+	log.Printf("Successfully imported %d corporations in %d batches over %v",
+		processed, batchCount, duration)
+	log.Printf("Average: %.2f corporations/second", float64(processed)/duration.Seconds())
 
 	return nil
 }

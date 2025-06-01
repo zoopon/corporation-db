@@ -39,7 +39,11 @@ SELECT id, corporate_number, name, kana, name_en, postal_code, location,
        created_at, updated_at 
 FROM corporations 
 WHERE ($1 = '' OR corporate_number = $1)
-  AND ($2 = '' OR name ILIKE '%' || $2 || '%')
+  AND ($2 = '' OR (
+    name ILIKE '%' || $2 || '%' OR 
+    kana ILIKE '%' || $2 || '%' OR 
+    name_en ILIKE '%' || $2 || '%'
+  ))
   AND ($3 = '' OR location ILIKE '%' || $3 || '%')
   AND ($4 = '' OR status = $4)
   AND ($5 = '' OR prefecture_code = $5)
@@ -50,7 +54,11 @@ LIMIT $6 OFFSET $7;
 SELECT COUNT(*) 
 FROM corporations 
 WHERE ($1 = '' OR corporate_number = $1)
-  AND ($2 = '' OR name ILIKE '%' || $2 || '%')
+  AND ($2 = '' OR (
+    name ILIKE '%' || $2 || '%' OR 
+    kana ILIKE '%' || $2 || '%' OR 
+    name_en ILIKE '%' || $2 || '%'
+  ))
   AND ($3 = '' OR location ILIKE '%' || $3 || '%')
   AND ($4 = '' OR status = $4)
   AND ($5 = '' OR prefecture_code = $5);

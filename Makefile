@@ -1,26 +1,4 @@
-.PHONY: help docker-run docker-up docker-down docker-rebuild sql# Docker環境でアプリケーションを起動（開発環境・ホットリロード対応）
-docker-run:
-	docker compose up --build
-
-# Dockerコンテナを起動（バックグラウンド）
-docker-up:
-	docker compose up -d
-
-# Dockerコンテナを停止
-docker-down:
-	docker compose down
-
-# Dockerイメージを再ビルド
-docker-build:
-	docker compose build --no-cachema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all db-reset db-reset-data db-status db-connect
-
-# デフォルトターゲット
-help:
-	@echo "Available commands:"
-	@echo "  docker-run     - Start development environment with hot reload"
-	@echo "  docker-up      - Start Docker containers (background)"
-	@echo "  docker-down    - Stop Docker containers"
-	@echo "  docker-rebuild - Force rebuild Docker images (no cache)" docker-run docker-up docker-down docker-dev docker-dev-up docker-dev-down docker-rebuild sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all db-reset db-reset-data db-status db-connect
+.PHONY: help docker-run docker-up docker-down docker-dev docker-dev-up docker-dev-down docker-rebuild docker-rebuild-dev sqlc-generate schema-apply schema-diff schema-dry-run generate-api openapi-lint openapi-bundle openapi-preview schema-export schema-check docs-serve docs-build generate-all db-reset db-reset-data db-status db-connect
 
 # デフォルトターゲット
 help:

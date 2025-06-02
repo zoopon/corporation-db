@@ -218,8 +218,8 @@ func (c *GBizClient) DownloadFinanceData(ctx context.Context) (io.Reader, error)
 	url := c.baseURL + "/hojin/Download"
 
 	// Prepare form data for finance data download (using different downfile parameter)
-	// Note: The exact parameter may need adjustment based on gBizINFO API documentation
-	formData := "downfile=8&downtype=zip&downenc=UTF-8"
+	// Note: downfile=13 is for finance data (Zaimu)
+	formData := "downfile=13&downtype=zip&downenc=UTF-8"
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, strings.NewReader(formData))
 	if err != nil {
@@ -858,112 +858,111 @@ func (c *GBizClient) parseFinanceCSVRecord(headers []string, record []string) (*
 	if val, exists := fieldMap["事業年度"]; exists && val != "" {
 		finance.BusinessYear = val
 	}
-	if val, exists := fieldMap["期数"]; exists && val != "" {
+	if val, exists := fieldMap["回次"]; exists && val != "" {
 		finance.PeriodNumber = val
 	}
 	if val, exists := fieldMap["売上高"]; exists && val != "" {
 		finance.SalesRevenue = val
 	}
-	if val, exists := fieldMap["売上高単位"]; exists && val != "" {
+	if val, exists := fieldMap["売上高（単位)"]; exists && val != "" {
 		finance.SalesRevenueUnit = val
 	}
-	if val, exists := fieldMap["営業収益1"]; exists && val != "" {
+	if val, exists := fieldMap["営業収益"]; exists && val != "" {
 		finance.OperatingRevenue1 = val
 	}
-	if val, exists := fieldMap["営業収益1単位"]; exists && val != "" {
+	if val, exists := fieldMap["営業収益（単位）"]; exists && val != "" {
 		finance.OperatingRevenue1Unit = val
 	}
-	if val, exists := fieldMap["営業収益2"]; exists && val != "" {
+	if val, exists := fieldMap["営業収入"]; exists && val != "" {
 		finance.OperatingRevenue2 = val
 	}
-	if val, exists := fieldMap["営業収益2単位"]; exists && val != "" {
+	if val, exists := fieldMap["営業収入（単位）"]; exists && val != "" {
 		finance.OperatingRevenue2Unit = val
 	}
-	if val, exists := fieldMap["営業総収益"]; exists && val != "" {
+	if val, exists := fieldMap["営業総収入"]; exists && val != "" {
 		finance.GrossOperatingRevenue = val
 	}
-	if val, exists := fieldMap["営業総収益単位"]; exists && val != "" {
+	if val, exists := fieldMap["営業総収入（単位）"]; exists && val != "" {
 		finance.GrossOperatingRevenueUnit = val
 	}
 	if val, exists := fieldMap["経常収益"]; exists && val != "" {
 		finance.OrdinaryRevenue = val
 	}
-	if val, exists := fieldMap["経常収益単位"]; exists && val != "" {
+	if val, exists := fieldMap["経常収益（単位）"]; exists && val != "" {
 		finance.OrdinaryRevenueUnit = val
 	}
 	if val, exists := fieldMap["正味収入保険料"]; exists && val != "" {
 		finance.NetPremiumsWritten = val
 	}
-	if val, exists := fieldMap["正味収入保険料単位"]; exists && val != "" {
+	if val, exists := fieldMap["正味収入保険料（単位）"]; exists && val != "" {
 		finance.NetPremiumsWrittenUnit = val
 	}
-	if val, exists := fieldMap["経常利益"]; exists && val != "" {
+	if val, exists := fieldMap["経常利益又は経常損失（△）"]; exists && val != "" {
 		finance.OrdinaryIncome = val
 	}
-	if val, exists := fieldMap["経常利益単位"]; exists && val != "" {
+	if val, exists := fieldMap["経常利益又は経常損失（△）(単位)"]; exists && val != "" {
 		finance.OrdinaryIncomeUnit = val
 	}
-	if val, exists := fieldMap["当期純利益"]; exists && val != "" {
+	if val, exists := fieldMap["当期純利益又は当期純損失（△）"]; exists && val != "" {
 		finance.NetIncome = val
 	}
-	if val, exists := fieldMap["当期純利益単位"]; exists && val != "" {
+	if val, exists := fieldMap["当期純利益又は当期純損失（△）(単位)"]; exists && val != "" {
 		finance.NetIncomeUnit = val
 	}
 	if val, exists := fieldMap["資本金"]; exists && val != "" {
 		finance.CapitalStock = val
 	}
-	if val, exists := fieldMap["資本金単位"]; exists && val != "" {
+	if val, exists := fieldMap["資本金(単位)"]; exists && val != "" {
 		finance.CapitalStockUnit = val
 	}
 	if val, exists := fieldMap["純資産額"]; exists && val != "" {
 		finance.NetAssets = val
 	}
-	if val, exists := fieldMap["純資産額単位"]; exists && val != "" {
+	if val, exists := fieldMap["純資産額(単位)"]; exists && val != "" {
 		finance.NetAssetsUnit = val
 	}
 	if val, exists := fieldMap["総資産額"]; exists && val != "" {
 		finance.TotalAssets = val
 	}
-	if val, exists := fieldMap["総資産額単位"]; exists && val != "" {
+	if val, exists := fieldMap["総資産額(単位)"]; exists && val != "" {
 		finance.TotalAssetsUnit = val
 	}
 	if val, exists := fieldMap["従業員数"]; exists && val != "" {
 		finance.NumberOfEmployees = val
 	}
-	if val, exists := fieldMap["従業員数単位"]; exists && val != "" {
+	if val, exists := fieldMap["従業員数(単位)"]; exists && val != "" {
 		finance.NumberOfEmployeesUnit = val
 	}
 	if val, exists := fieldMap["大株主1"]; exists && val != "" {
 		finance.MajorShareholder1 = val
 	}
-	if val, exists := fieldMap["持株比率1"]; exists && val != "" {
+	if val, exists := fieldMap["発行済株式総数に対する所有株式数の割合1"]; exists && val != "" {
 		finance.ShareholdingRatio1 = val
 	}
 	if val, exists := fieldMap["大株主2"]; exists && val != "" {
 		finance.MajorShareholder2 = val
 	}
-	if val, exists := fieldMap["持株比率2"]; exists && val != "" {
+	if val, exists := fieldMap["発行済株式総数に対する所有株式数の割合2"]; exists && val != "" {
 		finance.ShareholdingRatio2 = val
 	}
 	if val, exists := fieldMap["大株主3"]; exists && val != "" {
 		finance.MajorShareholder3 = val
 	}
-	if val, exists := fieldMap["持株比率3"]; exists && val != "" {
+	if val, exists := fieldMap["発行済株式総数に対する所有株式数の割合3"]; exists && val != "" {
 		finance.ShareholdingRatio3 = val
 	}
 	if val, exists := fieldMap["大株主4"]; exists && val != "" {
 		finance.MajorShareholder4 = val
 	}
-	if val, exists := fieldMap["持株比率4"]; exists && val != "" {
+	if val, exists := fieldMap["発行済株式総数に対する所有株式数の割合4"]; exists && val != "" {
 		finance.ShareholdingRatio4 = val
 	}
 	if val, exists := fieldMap["大株主5"]; exists && val != "" {
 		finance.MajorShareholder5 = val
 	}
-	if val, exists := fieldMap["持株比率5"]; exists && val != "" {
+	if val, exists := fieldMap["発行済株式総数に対する所有株式数の割合5"]; exists && val != "" {
 		finance.ShareholdingRatio5 = val
 	}
-
 	return finance, nil
 }
 

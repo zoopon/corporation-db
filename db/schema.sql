@@ -125,7 +125,7 @@ CREATE TABLE finances (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
     -- Foreign Key
-    FOREIGN KEY (corporate_number) REFERENCES corporations(corporate_number) ON DELETE CASCADE
+    CONSTRAINT fk_finances_corporate_number FOREIGN KEY (corporate_number) REFERENCES corporations(corporate_number) ON DELETE CASCADE
 );
 
 -- 財務情報のインデックス

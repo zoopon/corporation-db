@@ -55,6 +55,14 @@ help:
 	@echo "  download-data-docker - Download data from gBizINFO (Docker)"
 	@echo "  import-data          - Import data from ZIP file (local)"
 	@echo "  import-data-docker   - Import data from ZIP file (Docker)"
+	@echo ""
+	@echo "Finance operations:"
+	@echo "  finance-download-build  - Build finance download command"
+	@echo "  finance-import-build    - Build finance import command"
+	@echo "  finance-download-data   - Download finance data from gBizINFO (local)"
+	@echo "  finance-import-data     - Import finance data from ZIP file (local)"
+	@echo "  finance-download-data-docker - Download finance data using Docker"
+	@echo "  finance-import-data-docker   - Import finance data using Docker"
 
 # Docker環境でアプリケーションを起動（開発環境・ホットリロード対応）
 docker-run:
@@ -179,7 +187,16 @@ import-build:
 	@echo "Building import command..."
 	go build -o bin/import cmd/import/main.go
 
-build-all: batch-build download-build import-build
+# Finance commands
+finance-download-build:
+	@echo "Building finance download command..."
+	go build -o bin/download-finance cmd/download-finance/main.go
+
+finance-import-build:
+	@echo "Building finance import command..."
+	go build -o bin/import-finance cmd/import-finance/main.go
+
+build-all: batch-build download-build import-build finance-download-build finance-import-build
 	@echo "All commands built successfully"
 
 download-data: download-build
@@ -199,6 +216,25 @@ import-data-docker:
 	@echo "Importing data from ZIP file using Docker..."
 	@read -p "Enter ZIP file path (relative to ./data/): " zipfile; \
 	docker compose run --rm import go run ./cmd/import -input "/data/$$zipfile"
+
+# Finance data operations
+finance-download-data: finance-download-build
+	@echo "Downloading finance data from gBizINFO..."
+	./bin/download-finance -output ./data/finance_$(shell date +%Y%m%d_%H%M%S).zip
+
+finance-import-data: finance-import-build
+	@echo "Importing finance data from ZIP file..."
+	@read -p "Enter ZIP file path: " zipfile; \
+	./bin/import-finance -input "$$zipfile"
+
+finance-download-data-docker:
+	@echo "Downloading finance data from gBizINFO using Docker..."
+	docker compose run --rm app go run ./cmd/download-finance -output /data/finance_$(shell date +%Y%m%d_%H%M%S).zip
+
+finance-import-data-docker:
+	@echo "Importing finance data from ZIP file using Docker..."
+	@read -p "Enter ZIP file path (relative to ./data/): " zipfile; \
+	docker compose run --rm app go run ./cmd/import-finance -input "/data/$$zipfile"
 
 # Database operations
 db-reset:

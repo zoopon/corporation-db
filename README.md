@@ -22,16 +22,30 @@ Go言語で構築されたクリーンアーキテクチャベースのWebアプ
 ## プロジェクト構造
 
 ```
-├── cmd/api/                 # メインアプリケーション
+├── cmd/
+│   ├── api/                 # メインアプリケーション
+│   ├── download/            # gBizINFO企業情報ダウンロードコマンド
+│   ├── import/              # 企業情報インポートコマンド
+│   ├── download-finance/    # gBizINFO財務情報ダウンロードコマンド
+│   └── import-finance/      # 財務情報インポートコマンド
 ├── internal/
 │   ├── api/                # 生成されたAPIコード（oapi-codegen）
 │   ├── domain/             # ドメイン層（エンティティ、リポジトリインターフェース）
+│   │   ├── corporation.go  # 企業情報ドメインモデル
+│   │   └── finance.go      # 財務情報ドメインモデル
 │   ├── usecase/            # ユースケース層（ビジネスロジック）
+│   │   ├── corporation.go  # 企業情報ユースケース
+│   │   └── finance.go      # 財務情報ユースケース
 │   ├── infrastructure/     # インフラストラクチャ層（データベース、外部API）
+│   │   ├── gbiz_client.go  # gBizINFO APIクライアント
+│   │   ├── corporation_repository.go  # 企業情報リポジトリ
+│   │   └── finance_repository.go      # 財務情報リポジトリ
 │   └── presentation/       # プレゼンテーション層（HTTPハンドラー、ルーター）
 ├── db/
 │   ├── schema.sql         # データベーススキーマ（sqldef用）
 │   └── queries/           # SQLクエリ（SQLC用）
+│       ├── corporations.sql  # 企業情報クエリ
+│       └── finances.sql      # 財務情報クエリ
 ├── api/                   # OpenAPI定義（分割管理）
 │   ├── openapi.yaml       # メインファイル
 │   ├── components/        # 再利用可能なコンポーネント
@@ -493,6 +507,89 @@ docker compose down -v
 - **自動バンドリング**: Redoclyによる統合 ✅
 - **リンティング**: 仕様品質チェック ✅
 - **コード生成**: oapi-codegenによる自動化 ✅
+
+## 📊 財務情報システム
+
+### 概要
+gBizINFOから提供される企業の財務情報（売上高、純利益、資本金、総資産、従業員数、株主情報等）をダウンロード・データベース保存・API提供するシステムです。
+
+### 機能
+- **財務データダウンロード**: gBizINFO APIから最新の財務情報を取得
+- **バッチインポート**: ダウンロードしたZIPファイルからデータベースへ一括インポート
+- **データ管理**: 企業別・期間別の財務情報管理
+- **API提供**: RESTful APIによる財務データアクセス
+
+### データ仕様
+財務情報は42フィールドで構成され、以下の情報を含みます：
+- **基本情報**: 法人番号、法人名、本店所在地
+- **会計情報**: 会計基準、事業年度、期間番号
+- **収益情報**: 売上高、営業収益、経常収益等
+- **財務情報**: 純利益、資本金、純資産、総資産
+- **人員情報**: 従業員数
+- **株主情報**: 主要株主5社とその持株比率
+
+### 使用方法
+
+#### 財務データのダウンロード
+```bash
+# ローカル環境でダウンロード
+make finance-download-data
+
+# Docker環境でダウンロード
+make finance-download-data-docker
+
+# 手動実行（カスタムオプション）
+./bin/download-finance -output ./data/my_finance_data.zip
+```
+
+#### 財務データのインポート
+```bash
+# ローカル環境でインポート
+make finance-import-data
+
+# Docker環境でインポート
+make finance-import-data-docker
+
+# 手動実行
+./bin/import-finance -input ./data/finance_20250602_120000.zip
+```
+
+#### コマンドビルド
+```bash
+# 財務ダウンロードコマンドのビルド
+make finance-download-build
+
+# 財務インポートコマンドのビルド
+make finance-import-build
+
+# 全コマンドのビルド（財務コマンドを含む）
+make build-all
+```
+
+### データベーススキーマ
+```sql
+CREATE TABLE finances (
+    id SERIAL PRIMARY KEY,
+    corporate_number VARCHAR(13) NOT NULL,
+    corporate_name_from_number TEXT,
+    head_office_location_from_number TEXT,
+    corporate_name TEXT,
+    head_office_location TEXT,
+    accounting_standards TEXT,
+    business_year TEXT,
+    period_number TEXT,
+    sales_revenue TEXT,
+    sales_revenue_unit TEXT,
+    -- ... (total 42 fields)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### API エンドポイント（予定）
+- `GET /finances` - 財務情報一覧取得
+- `GET /finances/{corporate_number}` - 企業別財務情報取得
+- `GET /finances/{corporate_number}/latest` - 最新財務情報取得
 
 ## API開発ワークフロー
 

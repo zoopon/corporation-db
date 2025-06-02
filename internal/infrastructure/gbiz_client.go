@@ -212,6 +212,62 @@ func (c *GBizClient) DownloadBasicInfoCSV(ctx context.Context) (string, error) {
 	return tmpFile.Name(), nil
 }
 
+// DownloadFinanceData downloads the finance information CSV ZIP file
+func (c *GBizClient) DownloadFinanceData(ctx context.Context) (io.Reader, error) {
+	// gBizINFO finance download endpoint
+	url := c.baseURL + "/hojin/Download"
+
+	// Prepare form data for finance data download (using different downfile parameter)
+	// Note: The exact parameter may need adjustment based on gBizINFO API documentation
+	formData := "downfile=8&downtype=zip&downenc=UTF-8"
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, strings.NewReader(formData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set appropriate headers for form submission
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+	req.Header.Set("Accept", "application/zip,*/*")
+	req.Header.Set("Referer", "https://info.gbiz.go.jp/hojin/DownloadTop")
+
+	log.Printf("Requesting gBizINFO finance data from: %s", url)
+	log.Printf("Request body: %s", formData)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download finance data: %w", err)
+	}
+
+	log.Printf("Response status: %d %s", resp.StatusCode, resp.Status)
+	log.Printf("Response headers: %v", resp.Header)
+
+	// Check if response is actually a ZIP file
+	contentType := resp.Header.Get("Content-Type")
+	log.Printf("Content-Type: %s", contentType)
+
+	if resp.StatusCode != http.StatusOK {
+		// Read error response body for debugging
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	// If content type suggests HTML instead of ZIP, read the response for debugging
+	if strings.Contains(contentType, "text/html") {
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read HTML response: %w", err)
+		}
+		log.Printf("Received HTML response (first 500 chars): %s", string(body[:min(500, len(body))]))
+		return nil, fmt.Errorf("received HTML response instead of ZIP file - this may indicate incorrect parameters or authentication required")
+	}
+
+	return resp.Body, nil
+}
+
 // LoadTestCSVFile loads a local test CSV file for testing purposes
 func (c *GBizClient) LoadTestCSVFile(csvPath string) ([]*domain.CreateCorporationRequest, error) {
 	file, err := os.Open(csvPath)
@@ -291,6 +347,40 @@ func (c *GBizClient) ExtractAndProcessCSVStream(zipPath string, batchProcessor f
 			processed, err := c.parseCSVStream(fileReader, batchProcessor)
 			if err != nil {
 				return totalProcessed, fmt.Errorf("failed to process CSV file %s: %w", file.Name, err)
+			}
+
+			totalProcessed += processed
+		}
+	}
+
+	return totalProcessed, nil
+}
+
+// ExtractAndProcessFinanceCSVStream extracts the ZIP file and processes finance CSV content in streaming batches
+func (c *GBizClient) ExtractAndProcessFinanceCSVStream(zipPath string, batchProcessor func([]*domain.Finance) error) (int, error) {
+	// Open ZIP file
+	reader, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to open ZIP file: %w", err)
+	}
+	defer reader.Close()
+
+	totalProcessed := 0
+
+	// Find and process CSV files in the ZIP
+	for _, file := range reader.File {
+		if strings.HasSuffix(strings.ToLower(file.Name), ".csv") {
+			fmt.Printf("Processing finance CSV file: %s\n", file.Name)
+
+			fileReader, err := file.Open()
+			if err != nil {
+				return totalProcessed, fmt.Errorf("failed to open CSV file %s: %w", file.Name, err)
+			}
+			defer fileReader.Close()
+
+			processed, err := c.parseFinanceCSVStream(fileReader, batchProcessor)
+			if err != nil {
+				return totalProcessed, fmt.Errorf("failed to process finance CSV file %s: %w", file.Name, err)
 			}
 
 			totalProcessed += processed
@@ -424,7 +514,7 @@ func (c *GBizClient) parseCSVStream(reader io.Reader, batchProcessor func([]*dom
 				}
 				totalProcessed += len(batch)
 				fmt.Printf("Processed batch of %d records (total: %d)\n", len(batch), totalProcessed)
-				
+
 				// Clear batch for next iteration (reuse slice to minimize allocations)
 				batch = batch[:0]
 			}
@@ -637,27 +727,244 @@ func (c *GBizClient) parseCSVRecord(headers []string, record []string) (*domain.
 	return corp, nil
 }
 
-// parseDate attempts to parse date string in multiple formats commonly used in CSV
-func parseDate(dateStr string) (*time.Time, error) {
-	if dateStr == "" {
-		return nil, nil
+// parseFinanceCSVStream parses finance CSV content in streaming batches to minimize memory usage
+func (c *GBizClient) parseFinanceCSVStream(reader io.Reader, batchProcessor func([]*domain.Finance) error) (int, error) {
+	csvReader := csv.NewReader(reader)
+
+	// Configure CSV reader for gBizINFO format
+	csvReader.LazyQuotes = true    // Allow lazy quotes for malformed CSV
+	csvReader.FieldsPerRecord = -1 // Allow variable number of fields per record
+
+	// Read header
+	headers, err := csvReader.Read()
+	if err != nil {
+		return 0, fmt.Errorf("failed to read CSV header: %w", err)
 	}
 
-	// List of supported date formats
-	formats := []string{
-		"2006-01-02",                // YYYY-MM-DD
-		"2006/01/02",                // YYYY/MM/DD
-		"2006-01-02T15:04:05Z07:00", // RFC3339 with timezone (e.g., 2020-12-02T00:00:00+09:00)
-		time.RFC3339,                // Standard RFC3339
-	}
+	fmt.Printf("Finance CSV Headers: %v\n", headers)
+	fmt.Printf("Number of columns: %d\n", len(headers))
 
-	for _, format := range formats {
-		if date, err := time.Parse(format, dateStr); err == nil {
-			return &date, nil
+	const batchSize = 500 // Reduced batch size for better memory efficiency
+	batch := make([]*domain.Finance, 0, batchSize)
+	lineNum := 1
+	totalProcessed := 0
+
+	for {
+		record, err := csvReader.Read()
+		if err == io.EOF {
+			// Process final batch if any records remain
+			if len(batch) > 0 {
+				if err := batchProcessor(batch); err != nil {
+					return totalProcessed, fmt.Errorf("failed to process final batch at line %d: %w", lineNum, err)
+				}
+				totalProcessed += len(batch)
+				fmt.Printf("Processed final batch of %d finance records (total: %d)\n", len(batch), totalProcessed)
+			}
+			break
+		}
+		if err != nil {
+			fmt.Printf("Warning: failed to read line %d: %v\n", lineNum, err)
+			lineNum++
+			continue
+		}
+
+		// Skip if not enough columns
+		if len(record) < 5 {
+			lineNum++
+			continue
+		}
+
+		finance, err := c.parseFinanceCSVRecord(headers, record)
+		if err != nil {
+			fmt.Printf("Warning: failed to parse finance line %d: %v\n", lineNum, err)
+			lineNum++
+			continue
+		}
+
+		if finance != nil {
+			batch = append(batch, finance)
+
+			// Process batch when it reaches the target size
+			if len(batch) >= batchSize {
+				if err := batchProcessor(batch); err != nil {
+					return totalProcessed, fmt.Errorf("failed to process batch at line %d: %w", lineNum, err)
+				}
+				totalProcessed += len(batch)
+				fmt.Printf("Processed batch of %d finance records (total: %d)\n", len(batch), totalProcessed)
+
+				// Clear batch for next iteration (reuse slice to minimize allocations)
+				batch = batch[:0]
+			}
+		}
+		lineNum++
+
+		// Progress indicator for large files - reduced frequency to minimize I/O overhead
+		if lineNum%100000 == 0 {
+			fmt.Printf("Processed %d lines...\n", lineNum)
 		}
 	}
 
-	return nil, fmt.Errorf("unable to parse date: %s", dateStr)
+	fmt.Printf("Successfully processed %d finance records from CSV\n", totalProcessed)
+	return totalProcessed, nil
+}
+
+// parseFinanceCSVRecord parses a single CSV record into Finance
+func (c *GBizClient) parseFinanceCSVRecord(headers []string, record []string) (*domain.Finance, error) {
+	// Create a map for easier field access
+	fieldMap := make(map[string]string)
+	for i, header := range headers {
+		if i < len(record) {
+			// Clean header (remove BOM and quotes)
+			cleanHeader := strings.Trim(strings.TrimPrefix(header, "\ufeff"), "\"")
+			fieldMap[cleanHeader] = strings.TrimSpace(record[i])
+		}
+	}
+
+	// Extract corporate number from first column or specific header
+	corporateNumber := ""
+	if len(record) > 0 {
+		corporateNumber = strings.TrimSpace(record[0])
+	}
+	// Also try from named field
+	if val, exists := fieldMap["法人番号"]; exists && val != "" {
+		corporateNumber = val
+	}
+
+	// Validate corporate number (should be 13 digits)
+	if len(corporateNumber) != 13 {
+		return nil, fmt.Errorf("invalid corporate number: %s", corporateNumber)
+	}
+
+	finance := &domain.Finance{
+		CorporateNumber: corporateNumber,
+	}
+
+	// Map CSV fields to Finance structure based on gBizINFO finance CSV specification
+	if val, exists := fieldMap["法人名（法人番号）"]; exists && val != "" {
+		finance.CorporateNameFromNumber = val
+	}
+	if val, exists := fieldMap["本社所在地（法人番号）"]; exists && val != "" {
+		finance.HeadOfficeLocationFromNumber = val
+	}
+	if val, exists := fieldMap["法人名"]; exists && val != "" {
+		finance.CorporateName = val
+	}
+	if val, exists := fieldMap["本社所在地"]; exists && val != "" {
+		finance.HeadOfficeLocation = val
+	}
+	if val, exists := fieldMap["会計基準"]; exists && val != "" {
+		finance.AccountingStandards = val
+	}
+	if val, exists := fieldMap["事業年度"]; exists && val != "" {
+		finance.BusinessYear = val
+	}
+	if val, exists := fieldMap["期数"]; exists && val != "" {
+		finance.PeriodNumber = val
+	}
+	if val, exists := fieldMap["売上高"]; exists && val != "" {
+		finance.SalesRevenue = val
+	}
+	if val, exists := fieldMap["売上高単位"]; exists && val != "" {
+		finance.SalesRevenueUnit = val
+	}
+	if val, exists := fieldMap["営業収益1"]; exists && val != "" {
+		finance.OperatingRevenue1 = val
+	}
+	if val, exists := fieldMap["営業収益1単位"]; exists && val != "" {
+		finance.OperatingRevenue1Unit = val
+	}
+	if val, exists := fieldMap["営業収益2"]; exists && val != "" {
+		finance.OperatingRevenue2 = val
+	}
+	if val, exists := fieldMap["営業収益2単位"]; exists && val != "" {
+		finance.OperatingRevenue2Unit = val
+	}
+	if val, exists := fieldMap["営業総収益"]; exists && val != "" {
+		finance.GrossOperatingRevenue = val
+	}
+	if val, exists := fieldMap["営業総収益単位"]; exists && val != "" {
+		finance.GrossOperatingRevenueUnit = val
+	}
+	if val, exists := fieldMap["経常収益"]; exists && val != "" {
+		finance.OrdinaryRevenue = val
+	}
+	if val, exists := fieldMap["経常収益単位"]; exists && val != "" {
+		finance.OrdinaryRevenueUnit = val
+	}
+	if val, exists := fieldMap["正味収入保険料"]; exists && val != "" {
+		finance.NetPremiumsWritten = val
+	}
+	if val, exists := fieldMap["正味収入保険料単位"]; exists && val != "" {
+		finance.NetPremiumsWrittenUnit = val
+	}
+	if val, exists := fieldMap["経常利益"]; exists && val != "" {
+		finance.OrdinaryIncome = val
+	}
+	if val, exists := fieldMap["経常利益単位"]; exists && val != "" {
+		finance.OrdinaryIncomeUnit = val
+	}
+	if val, exists := fieldMap["当期純利益"]; exists && val != "" {
+		finance.NetIncome = val
+	}
+	if val, exists := fieldMap["当期純利益単位"]; exists && val != "" {
+		finance.NetIncomeUnit = val
+	}
+	if val, exists := fieldMap["資本金"]; exists && val != "" {
+		finance.CapitalStock = val
+	}
+	if val, exists := fieldMap["資本金単位"]; exists && val != "" {
+		finance.CapitalStockUnit = val
+	}
+	if val, exists := fieldMap["純資産額"]; exists && val != "" {
+		finance.NetAssets = val
+	}
+	if val, exists := fieldMap["純資産額単位"]; exists && val != "" {
+		finance.NetAssetsUnit = val
+	}
+	if val, exists := fieldMap["総資産額"]; exists && val != "" {
+		finance.TotalAssets = val
+	}
+	if val, exists := fieldMap["総資産額単位"]; exists && val != "" {
+		finance.TotalAssetsUnit = val
+	}
+	if val, exists := fieldMap["従業員数"]; exists && val != "" {
+		finance.NumberOfEmployees = val
+	}
+	if val, exists := fieldMap["従業員数単位"]; exists && val != "" {
+		finance.NumberOfEmployeesUnit = val
+	}
+	if val, exists := fieldMap["大株主1"]; exists && val != "" {
+		finance.MajorShareholder1 = val
+	}
+	if val, exists := fieldMap["持株比率1"]; exists && val != "" {
+		finance.ShareholdingRatio1 = val
+	}
+	if val, exists := fieldMap["大株主2"]; exists && val != "" {
+		finance.MajorShareholder2 = val
+	}
+	if val, exists := fieldMap["持株比率2"]; exists && val != "" {
+		finance.ShareholdingRatio2 = val
+	}
+	if val, exists := fieldMap["大株主3"]; exists && val != "" {
+		finance.MajorShareholder3 = val
+	}
+	if val, exists := fieldMap["持株比率3"]; exists && val != "" {
+		finance.ShareholdingRatio3 = val
+	}
+	if val, exists := fieldMap["大株主4"]; exists && val != "" {
+		finance.MajorShareholder4 = val
+	}
+	if val, exists := fieldMap["持株比率4"]; exists && val != "" {
+		finance.ShareholdingRatio4 = val
+	}
+	if val, exists := fieldMap["大株主5"]; exists && val != "" {
+		finance.MajorShareholder5 = val
+	}
+	if val, exists := fieldMap["持株比率5"]; exists && val != "" {
+		finance.ShareholdingRatio5 = val
+	}
+
+	return finance, nil
 }
 
 // Cleanup removes temporary files
@@ -731,6 +1038,30 @@ func extractPrefectureCode(location string) string {
 	}
 
 	return "" // No prefecture or city match found
+}
+
+// parseDate parses various date formats commonly found in CSV files
+func parseDate(dateStr string) (*time.Time, error) {
+	if dateStr == "" {
+		return nil, nil
+	}
+
+	// List of date formats to try in order
+	formats := []string{
+		"2006-01-02T15:04:05Z07:00", // RFC3339 with timezone
+		"2006-01-02T15:04:05Z",      // RFC3339 UTC
+		"2006-01-02",                // YYYY-MM-DD
+		"2006/01/02",                // YYYY/MM/DD
+		"2006-01-02T15:04:05",       // ISO format without timezone
+	}
+
+	for _, format := range formats {
+		if parsed, err := time.Parse(format, dateStr); err == nil {
+			return &parsed, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to parse date: %s", dateStr)
 }
 
 // ImportFromCSVFile imports corporations from a CSV file directly

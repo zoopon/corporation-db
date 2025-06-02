@@ -38,3 +38,51 @@ type Corporation struct {
 	CreatedAt              sql.NullTime   `json:"created_at"`
 	UpdatedAt              sql.NullTime   `json:"updated_at"`
 }
+
+type Finance struct {
+	ID                           int32          `json:"id"`
+	CorporateNumber              string         `json:"corporate_number"`
+	CorporateNameFromNumber      sql.NullString `json:"corporate_name_from_number"`
+	HeadOfficeLocationFromNumber sql.NullString `json:"head_office_location_from_number"`
+	CorporateName                sql.NullString `json:"corporate_name"`
+	HeadOfficeLocation           sql.NullString `json:"head_office_location"`
+	AccountingStandards          sql.NullString `json:"accounting_standards"`
+	BusinessYear                 sql.NullString `json:"business_year"`
+	PeriodNumber                 sql.NullString `json:"period_number"`
+	SalesRevenue                 sql.NullString `json:"sales_revenue"`
+	SalesRevenueUnit             sql.NullString `json:"sales_revenue_unit"`
+	OperatingRevenue1            sql.NullString `json:"operating_revenue1"`
+	OperatingRevenue1Unit        sql.NullString `json:"operating_revenue1_unit"`
+	OperatingRevenue2            sql.NullString `json:"operating_revenue2"`
+	OperatingRevenue2Unit        sql.NullString `json:"operating_revenue2_unit"`
+	GrossOperatingRevenue        sql.NullString `json:"gross_operating_revenue"`
+	GrossOperatingRevenueUnit    sql.NullString `json:"gross_operating_revenue_unit"`
+	OrdinaryRevenue              sql.NullString `json:"ordinary_revenue"`
+	OrdinaryRevenueUnit          sql.NullString `json:"ordinary_revenue_unit"`
+	NetPremiumsWritten           sql.NullString `json:"net_premiums_written"`
+	NetPremiumsWrittenUnit       sql.NullString `json:"net_premiums_written_unit"`
+	OrdinaryIncome               sql.NullString `json:"ordinary_income"`
+	OrdinaryIncomeUnit           sql.NullString `json:"ordinary_income_unit"`
+	NetIncome                    sql.NullString `json:"net_income"`
+	NetIncomeUnit                sql.NullString `json:"net_income_unit"`
+	CapitalStock                 sql.NullString `json:"capital_stock"`
+	CapitalStockUnit             sql.NullString `json:"capital_stock_unit"`
+	NetAssets                    sql.NullString `json:"net_assets"`
+	NetAssetsUnit                sql.NullString `json:"net_assets_unit"`
+	TotalAssets                  sql.NullString `json:"total_assets"`
+	TotalAssetsUnit              sql.NullString `json:"total_assets_unit"`
+	NumberOfEmployees            sql.NullString `json:"number_of_employees"`
+	NumberOfEmployeesUnit        sql.NullString `json:"number_of_employees_unit"`
+	MajorShareholder1            sql.NullString `json:"major_shareholder1"`
+	ShareholdingRatio1           sql.NullString `json:"shareholding_ratio1"`
+	MajorShareholder2            sql.NullString `json:"major_shareholder2"`
+	ShareholdingRatio2           sql.NullString `json:"shareholding_ratio2"`
+	MajorShareholder3            sql.NullString `json:"major_shareholder3"`
+	ShareholdingRatio3           sql.NullString `json:"shareholding_ratio3"`
+	MajorShareholder4            sql.NullString `json:"major_shareholder4"`
+	ShareholdingRatio4           sql.NullString `json:"shareholding_ratio4"`
+	MajorShareholder5            sql.NullString `json:"major_shareholder5"`
+	ShareholdingRatio5           sql.NullString `json:"shareholding_ratio5"`
+	CreatedAt                    sql.NullTime   `json:"created_at"`
+	UpdatedAt                    sql.NullTime   `json:"updated_at"`
+}

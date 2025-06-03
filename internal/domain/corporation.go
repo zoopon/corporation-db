@@ -3,6 +3,8 @@ package domain
 import (
 	"errors"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Corporation errors
@@ -14,7 +16,7 @@ var (
 
 // Corporation represents a corporation entity based on gBizINFO REST API specification
 type Corporation struct {
-	ID int64 `json:"id"`
+	ID uuid.UUID `json:"id"`
 
 	// Basic Information (基本情報) - matches gBizINFO API response
 	CorporateNumber string  `json:"corporate_number"`          // corporate_number (法人番号)
@@ -97,4 +99,40 @@ type CorporationFilter struct {
 	CorporateType   *string `json:"corporate_type,omitempty"`
 	Limit           int     `json:"limit"`
 	Offset          int     `json:"offset"`
+}
+
+// NewCorporation creates a new Corporation with a UUIDv7 primary key
+func NewCorporation(req CreateCorporationRequest) *Corporation {
+	now := time.Now()
+
+	return &Corporation{
+		ID:                     MustNewUUIDv7(), // Generate UUIDv7 for better DB performance
+		CorporateNumber:        req.CorporateNumber,
+		Name:                   req.Name,
+		Kana:                   req.Kana,
+		NameEn:                 req.NameEn,
+		SearchName:             req.SearchName,
+		PostalCode:             req.PostalCode,
+		Location:               req.Location,
+		PrefectureCode:         req.PrefectureCode,
+		Status:                 req.Status,
+		CloseDate:              req.CloseDate,
+		CloseCause:             req.CloseCause,
+		RepresentativeName:     req.RepresentativeName,
+		RepresentativePosition: req.RepresentativePosition,
+		DateOfEstablishment:    req.DateOfEstablishment,
+		FoundingYear:           req.FoundingYear,
+		CapitalStock:           req.CapitalStock,
+		EmployeeNumber:         req.EmployeeNumber,
+		CompanySizeMale:        req.CompanySizeMale,
+		CompanySizeFemale:      req.CompanySizeFemale,
+		BusinessItems:          req.BusinessItems,
+		BusinessSummary:        req.BusinessSummary,
+		CompanyUrl:             req.CompanyUrl,
+		QualificationGrade:     req.QualificationGrade,
+		NumberOfActivity:       req.NumberOfActivity,
+		UpdateDate:             req.UpdateDate,
+		CreatedAt:              now,
+		UpdatedAt:              now,
+	}
 }

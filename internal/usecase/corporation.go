@@ -9,6 +9,8 @@ import (
 	"corporation-db/internal/domain"
 	"corporation-db/internal/infrastructure"
 	"corporation-db/internal/utils"
+
+	"github.com/google/uuid"
 )
 
 // CorporationUsecase handles corporation business logic
@@ -33,7 +35,7 @@ func (u *CorporationUsecase) GetAll(ctx context.Context) ([]*domain.Corporation,
 }
 
 // GetByID retrieves a corporation by ID
-func (u *CorporationUsecase) GetByID(ctx context.Context, id int64) (*domain.Corporation, error) {
+func (u *CorporationUsecase) GetByID(ctx context.Context, id uuid.UUID) (*domain.Corporation, error) {
 	return u.corporationRepo.GetByID(ctx, id)
 }
 

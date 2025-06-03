@@ -18,7 +18,7 @@ SELECT id, corporate_number, name, kana, name_en, search_name, postal_code, loca
        company_url, qualification_grade, number_of_activity, update_date,
        created_at, updated_at 
 FROM corporations 
-WHERE id = $1 LIMIT 1;
+WHERE id = $1::uuid LIMIT 1;
 
 -- name: GetCorporationByCorporateNumber :one
 SELECT id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
@@ -65,13 +65,13 @@ WHERE ($1 = '' OR corporate_number = $1)
 
 -- name: CreateCorporation :one
 INSERT INTO corporations (
-    corporate_number, name, kana, name_en, search_name, postal_code, location, prefecture_code,
+    id, corporate_number, name, kana, name_en, search_name, postal_code, location, prefecture_code,
     status, close_date, close_cause, representative_name, representative_position,
     date_of_establishment, founding_year, capital_stock, employee_number,
     company_size_male, company_size_female, business_items, business_summary,
     company_url, qualification_grade, number_of_activity, update_date
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
 )
 RETURNING id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
           prefecture_code, status, close_date, close_cause, representative_name, representative_position,
@@ -89,7 +89,7 @@ SET name = $2, kana = $3, name_en = $4, search_name = $5, postal_code = $6, loca
     company_size_female = $19, business_items = $20, business_summary = $21,
     company_url = $22, qualification_grade = $23, number_of_activity = $24,
     update_date = $25, updated_at = NOW()
-WHERE id = $1
+WHERE id = $1::uuid
 RETURNING id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
           prefecture_code, status, close_date, close_cause, representative_name, representative_position,
           date_of_establishment, founding_year, capital_stock, employee_number,
@@ -99,7 +99,7 @@ RETURNING id, corporate_number, name, kana, name_en, search_name, postal_code, l
 
 -- name: DeleteCorporation :exec
 DELETE FROM corporations
-WHERE id = $1;
+WHERE id = $1::uuid;
 
 -- name: DeleteCorporationByCorporateNumber :exec
 DELETE FROM corporations
@@ -107,13 +107,13 @@ WHERE corporate_number = $1;
 
 -- name: UpsertCorporation :one
 INSERT INTO corporations (
-    corporate_number, name, kana, name_en, search_name, postal_code, location, prefecture_code,
+    id, corporate_number, name, kana, name_en, search_name, postal_code, location, prefecture_code,
     status, close_date, close_cause, representative_name, representative_position,
     date_of_establishment, founding_year, capital_stock, employee_number,
     company_size_male, company_size_female, business_items, business_summary,
     company_url, qualification_grade, number_of_activity, update_date
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
 )
 ON CONFLICT (corporate_number)
 DO UPDATE SET

@@ -85,7 +85,7 @@ func (h *CorporationHandler) GetCorporationsCorporateNumber(w http.ResponseWrite
 
 func convertCorporationToAPI(corp *domain.Corporation) api.Corporation {
 	apiCorp := api.Corporation{
-		Id:              corp.ID,
+		Id:              openapi_types.UUID(corp.ID),
 		CorporateNumber: corp.CorporateNumber,
 		Name:            corp.Name,
 		Status:          corp.Status,

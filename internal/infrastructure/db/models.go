@@ -6,10 +6,12 @@ package db
 
 import (
 	"database/sql"
+
+	"github.com/google/uuid"
 )
 
 type Corporation struct {
-	ID                     int32          `json:"id"`
+	ID                     uuid.UUID      `json:"id"`
 	CorporateNumber        string         `json:"corporate_number"`
 	Name                   string         `json:"name"`
 	Kana                   sql.NullString `json:"kana"`
@@ -40,7 +42,7 @@ type Corporation struct {
 }
 
 type Finance struct {
-	ID                           int32          `json:"id"`
+	ID                           uuid.UUID      `json:"id"`
 	CorporateNumber              string         `json:"corporate_number"`
 	CorporateNameFromNumber      sql.NullString `json:"corporate_name_from_number"`
 	HeadOfficeLocationFromNumber sql.NullString `json:"head_office_location_from_number"`

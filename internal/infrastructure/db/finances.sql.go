@@ -8,6 +8,8 @@ package db
 import (
 	"context"
 	"database/sql"
+
+	"github.com/google/uuid"
 )
 
 const countAllFinances = `-- name: CountAllFinances :one
@@ -34,6 +36,7 @@ func (q *Queries) CountFinances(ctx context.Context) (int64, error) {
 
 const createFinance = `-- name: CreateFinance :exec
 INSERT INTO finances (
+    id,
     corporate_number,
     corporate_name_from_number,
     head_office_location_from_number,
@@ -78,11 +81,12 @@ INSERT INTO finances (
     shareholding_ratio5
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-    $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42
+    $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43
 )
 `
 
 type CreateFinanceParams struct {
+	ID                           uuid.UUID      `json:"id"`
 	CorporateNumber              string         `json:"corporate_number"`
 	CorporateNameFromNumber      sql.NullString `json:"corporate_name_from_number"`
 	HeadOfficeLocationFromNumber sql.NullString `json:"head_office_location_from_number"`
@@ -129,6 +133,7 @@ type CreateFinanceParams struct {
 
 func (q *Queries) CreateFinance(ctx context.Context, arg CreateFinanceParams) error {
 	_, err := q.db.ExecContext(ctx, createFinance,
+		arg.ID,
 		arg.CorporateNumber,
 		arg.CorporateNameFromNumber,
 		arg.HeadOfficeLocationFromNumber,

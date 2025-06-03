@@ -1,11 +1,13 @@
 package infrastructure
 
 import (
-"context"
-"database/sql"
+	"context"
+	"database/sql"
 
-"corporation-db/internal/domain"
-"corporation-db/internal/infrastructure/db"
+	"corporation-db/internal/domain"
+	"corporation-db/internal/infrastructure/db"
+
+	"github.com/google/uuid"
 )
 
 type FinanceRepository struct {
@@ -22,50 +24,57 @@ func NewFinanceRepository(database *sql.DB) domain.FinanceRepository {
 
 func (r *FinanceRepository) Create(finance *domain.Finance) error {
 	ctx := context.Background()
+
+	// Generate UUIDv7 if not already set
+	if finance.ID == uuid.Nil {
+		finance.ID = domain.NewUUIDv7()
+	}
+
 	return r.queries.CreateFinance(ctx, db.CreateFinanceParams{
-CorporateNumber:              finance.CorporateNumber,
-CorporateNameFromNumber:      sql.NullString{String: finance.CorporateNameFromNumber, Valid: finance.CorporateNameFromNumber != ""},
-HeadOfficeLocationFromNumber: sql.NullString{String: finance.HeadOfficeLocationFromNumber, Valid: finance.HeadOfficeLocationFromNumber != ""},
-CorporateName:                sql.NullString{String: finance.CorporateName, Valid: finance.CorporateName != ""},
-HeadOfficeLocation:           sql.NullString{String: finance.HeadOfficeLocation, Valid: finance.HeadOfficeLocation != ""},
-AccountingStandards:          sql.NullString{String: finance.AccountingStandards, Valid: finance.AccountingStandards != ""},
-BusinessYear:                 sql.NullString{String: finance.BusinessYear, Valid: finance.BusinessYear != ""},
-PeriodNumber:                 sql.NullString{String: finance.PeriodNumber, Valid: finance.PeriodNumber != ""},
-SalesRevenue:                 sql.NullString{String: finance.SalesRevenue, Valid: finance.SalesRevenue != ""},
-SalesRevenueUnit:             sql.NullString{String: finance.SalesRevenueUnit, Valid: finance.SalesRevenueUnit != ""},
-OperatingRevenue1:            sql.NullString{String: finance.OperatingRevenue1, Valid: finance.OperatingRevenue1 != ""},
-OperatingRevenue1Unit:        sql.NullString{String: finance.OperatingRevenue1Unit, Valid: finance.OperatingRevenue1Unit != ""},
-OperatingRevenue2:            sql.NullString{String: finance.OperatingRevenue2, Valid: finance.OperatingRevenue2 != ""},
-OperatingRevenue2Unit:        sql.NullString{String: finance.OperatingRevenue2Unit, Valid: finance.OperatingRevenue2Unit != ""},
-GrossOperatingRevenue:        sql.NullString{String: finance.GrossOperatingRevenue, Valid: finance.GrossOperatingRevenue != ""},
-GrossOperatingRevenueUnit:    sql.NullString{String: finance.GrossOperatingRevenueUnit, Valid: finance.GrossOperatingRevenueUnit != ""},
-OrdinaryRevenue:              sql.NullString{String: finance.OrdinaryRevenue, Valid: finance.OrdinaryRevenue != ""},
-OrdinaryRevenueUnit:          sql.NullString{String: finance.OrdinaryRevenueUnit, Valid: finance.OrdinaryRevenueUnit != ""},
-NetPremiumsWritten:           sql.NullString{String: finance.NetPremiumsWritten, Valid: finance.NetPremiumsWritten != ""},
-NetPremiumsWrittenUnit:       sql.NullString{String: finance.NetPremiumsWrittenUnit, Valid: finance.NetPremiumsWrittenUnit != ""},
-OrdinaryIncome:               sql.NullString{String: finance.OrdinaryIncome, Valid: finance.OrdinaryIncome != ""},
-OrdinaryIncomeUnit:           sql.NullString{String: finance.OrdinaryIncomeUnit, Valid: finance.OrdinaryIncomeUnit != ""},
-NetIncome:                    sql.NullString{String: finance.NetIncome, Valid: finance.NetIncome != ""},
-NetIncomeUnit:                sql.NullString{String: finance.NetIncomeUnit, Valid: finance.NetIncomeUnit != ""},
-CapitalStock:                 sql.NullString{String: finance.CapitalStock, Valid: finance.CapitalStock != ""},
-CapitalStockUnit:             sql.NullString{String: finance.CapitalStockUnit, Valid: finance.CapitalStockUnit != ""},
-NetAssets:                    sql.NullString{String: finance.NetAssets, Valid: finance.NetAssets != ""},
-NetAssetsUnit:                sql.NullString{String: finance.NetAssetsUnit, Valid: finance.NetAssetsUnit != ""},
-TotalAssets:                  sql.NullString{String: finance.TotalAssets, Valid: finance.TotalAssets != ""},
-TotalAssetsUnit:              sql.NullString{String: finance.TotalAssetsUnit, Valid: finance.TotalAssetsUnit != ""},
-NumberOfEmployees:            sql.NullString{String: finance.NumberOfEmployees, Valid: finance.NumberOfEmployees != ""},
-NumberOfEmployeesUnit:        sql.NullString{String: finance.NumberOfEmployeesUnit, Valid: finance.NumberOfEmployeesUnit != ""},
-MajorShareholder1:            sql.NullString{String: finance.MajorShareholder1, Valid: finance.MajorShareholder1 != ""},
-ShareholdingRatio1:           sql.NullString{String: finance.ShareholdingRatio1, Valid: finance.ShareholdingRatio1 != ""},
-MajorShareholder2:            sql.NullString{String: finance.MajorShareholder2, Valid: finance.MajorShareholder2 != ""},
-ShareholdingRatio2:           sql.NullString{String: finance.ShareholdingRatio2, Valid: finance.ShareholdingRatio2 != ""},
-MajorShareholder3:            sql.NullString{String: finance.MajorShareholder3, Valid: finance.MajorShareholder3 != ""},
-ShareholdingRatio3:           sql.NullString{String: finance.ShareholdingRatio3, Valid: finance.ShareholdingRatio3 != ""},
-MajorShareholder4:            sql.NullString{String: finance.MajorShareholder4, Valid: finance.MajorShareholder4 != ""},
-ShareholdingRatio4:           sql.NullString{String: finance.ShareholdingRatio4, Valid: finance.ShareholdingRatio4 != ""},
-MajorShareholder5:            sql.NullString{String: finance.MajorShareholder5, Valid: finance.MajorShareholder5 != ""},
-ShareholdingRatio5:           sql.NullString{String: finance.ShareholdingRatio5, Valid: finance.ShareholdingRatio5 != ""},
-})
+		ID:                           finance.ID,
+		CorporateNumber:              finance.CorporateNumber,
+		CorporateNameFromNumber:      sql.NullString{String: finance.CorporateNameFromNumber, Valid: finance.CorporateNameFromNumber != ""},
+		HeadOfficeLocationFromNumber: sql.NullString{String: finance.HeadOfficeLocationFromNumber, Valid: finance.HeadOfficeLocationFromNumber != ""},
+		CorporateName:                sql.NullString{String: finance.CorporateName, Valid: finance.CorporateName != ""},
+		HeadOfficeLocation:           sql.NullString{String: finance.HeadOfficeLocation, Valid: finance.HeadOfficeLocation != ""},
+		AccountingStandards:          sql.NullString{String: finance.AccountingStandards, Valid: finance.AccountingStandards != ""},
+		BusinessYear:                 sql.NullString{String: finance.BusinessYear, Valid: finance.BusinessYear != ""},
+		PeriodNumber:                 sql.NullString{String: finance.PeriodNumber, Valid: finance.PeriodNumber != ""},
+		SalesRevenue:                 sql.NullString{String: finance.SalesRevenue, Valid: finance.SalesRevenue != ""},
+		SalesRevenueUnit:             sql.NullString{String: finance.SalesRevenueUnit, Valid: finance.SalesRevenueUnit != ""},
+		OperatingRevenue1:            sql.NullString{String: finance.OperatingRevenue1, Valid: finance.OperatingRevenue1 != ""},
+		OperatingRevenue1Unit:        sql.NullString{String: finance.OperatingRevenue1Unit, Valid: finance.OperatingRevenue1Unit != ""},
+		OperatingRevenue2:            sql.NullString{String: finance.OperatingRevenue2, Valid: finance.OperatingRevenue2 != ""},
+		OperatingRevenue2Unit:        sql.NullString{String: finance.OperatingRevenue2Unit, Valid: finance.OperatingRevenue2Unit != ""},
+		GrossOperatingRevenue:        sql.NullString{String: finance.GrossOperatingRevenue, Valid: finance.GrossOperatingRevenue != ""},
+		GrossOperatingRevenueUnit:    sql.NullString{String: finance.GrossOperatingRevenueUnit, Valid: finance.GrossOperatingRevenueUnit != ""},
+		OrdinaryRevenue:              sql.NullString{String: finance.OrdinaryRevenue, Valid: finance.OrdinaryRevenue != ""},
+		OrdinaryRevenueUnit:          sql.NullString{String: finance.OrdinaryRevenueUnit, Valid: finance.OrdinaryRevenueUnit != ""},
+		NetPremiumsWritten:           sql.NullString{String: finance.NetPremiumsWritten, Valid: finance.NetPremiumsWritten != ""},
+		NetPremiumsWrittenUnit:       sql.NullString{String: finance.NetPremiumsWrittenUnit, Valid: finance.NetPremiumsWrittenUnit != ""},
+		OrdinaryIncome:               sql.NullString{String: finance.OrdinaryIncome, Valid: finance.OrdinaryIncome != ""},
+		OrdinaryIncomeUnit:           sql.NullString{String: finance.OrdinaryIncomeUnit, Valid: finance.OrdinaryIncomeUnit != ""},
+		NetIncome:                    sql.NullString{String: finance.NetIncome, Valid: finance.NetIncome != ""},
+		NetIncomeUnit:                sql.NullString{String: finance.NetIncomeUnit, Valid: finance.NetIncomeUnit != ""},
+		CapitalStock:                 sql.NullString{String: finance.CapitalStock, Valid: finance.CapitalStock != ""},
+		CapitalStockUnit:             sql.NullString{String: finance.CapitalStockUnit, Valid: finance.CapitalStockUnit != ""},
+		NetAssets:                    sql.NullString{String: finance.NetAssets, Valid: finance.NetAssets != ""},
+		NetAssetsUnit:                sql.NullString{String: finance.NetAssetsUnit, Valid: finance.NetAssetsUnit != ""},
+		TotalAssets:                  sql.NullString{String: finance.TotalAssets, Valid: finance.TotalAssets != ""},
+		TotalAssetsUnit:              sql.NullString{String: finance.TotalAssetsUnit, Valid: finance.TotalAssetsUnit != ""},
+		NumberOfEmployees:            sql.NullString{String: finance.NumberOfEmployees, Valid: finance.NumberOfEmployees != ""},
+		NumberOfEmployeesUnit:        sql.NullString{String: finance.NumberOfEmployeesUnit, Valid: finance.NumberOfEmployeesUnit != ""},
+		MajorShareholder1:            sql.NullString{String: finance.MajorShareholder1, Valid: finance.MajorShareholder1 != ""},
+		ShareholdingRatio1:           sql.NullString{String: finance.ShareholdingRatio1, Valid: finance.ShareholdingRatio1 != ""},
+		MajorShareholder2:            sql.NullString{String: finance.MajorShareholder2, Valid: finance.MajorShareholder2 != ""},
+		ShareholdingRatio2:           sql.NullString{String: finance.ShareholdingRatio2, Valid: finance.ShareholdingRatio2 != ""},
+		MajorShareholder3:            sql.NullString{String: finance.MajorShareholder3, Valid: finance.MajorShareholder3 != ""},
+		ShareholdingRatio3:           sql.NullString{String: finance.ShareholdingRatio3, Valid: finance.ShareholdingRatio3 != ""},
+		MajorShareholder4:            sql.NullString{String: finance.MajorShareholder4, Valid: finance.MajorShareholder4 != ""},
+		ShareholdingRatio4:           sql.NullString{String: finance.ShareholdingRatio4, Valid: finance.ShareholdingRatio4 != ""},
+		MajorShareholder5:            sql.NullString{String: finance.MajorShareholder5, Valid: finance.MajorShareholder5 != ""},
+		ShareholdingRatio5:           sql.NullString{String: finance.ShareholdingRatio5, Valid: finance.ShareholdingRatio5 != ""},
+	})
 }
 
 func (r *FinanceRepository) CreateBatch(finances []*domain.Finance) error {
@@ -83,50 +92,56 @@ func (r *FinanceRepository) CreateBatch(finances []*domain.Finance) error {
 	ctx := context.Background()
 
 	for _, finance := range finances {
+		// Generate UUIDv7 if not already set
+		if finance.ID == uuid.Nil {
+			finance.ID = domain.NewUUIDv7()
+		}
+
 		err := queries.CreateFinance(ctx, db.CreateFinanceParams{
-CorporateNumber:              finance.CorporateNumber,
-CorporateNameFromNumber:      sql.NullString{String: finance.CorporateNameFromNumber, Valid: finance.CorporateNameFromNumber != ""},
-HeadOfficeLocationFromNumber: sql.NullString{String: finance.HeadOfficeLocationFromNumber, Valid: finance.HeadOfficeLocationFromNumber != ""},
-CorporateName:                sql.NullString{String: finance.CorporateName, Valid: finance.CorporateName != ""},
-HeadOfficeLocation:           sql.NullString{String: finance.HeadOfficeLocation, Valid: finance.HeadOfficeLocation != ""},
-AccountingStandards:          sql.NullString{String: finance.AccountingStandards, Valid: finance.AccountingStandards != ""},
-BusinessYear:                 sql.NullString{String: finance.BusinessYear, Valid: finance.BusinessYear != ""},
-PeriodNumber:                 sql.NullString{String: finance.PeriodNumber, Valid: finance.PeriodNumber != ""},
-SalesRevenue:                 sql.NullString{String: finance.SalesRevenue, Valid: finance.SalesRevenue != ""},
-SalesRevenueUnit:             sql.NullString{String: finance.SalesRevenueUnit, Valid: finance.SalesRevenueUnit != ""},
-OperatingRevenue1:            sql.NullString{String: finance.OperatingRevenue1, Valid: finance.OperatingRevenue1 != ""},
-OperatingRevenue1Unit:        sql.NullString{String: finance.OperatingRevenue1Unit, Valid: finance.OperatingRevenue1Unit != ""},
-OperatingRevenue2:            sql.NullString{String: finance.OperatingRevenue2, Valid: finance.OperatingRevenue2 != ""},
-OperatingRevenue2Unit:        sql.NullString{String: finance.OperatingRevenue2Unit, Valid: finance.OperatingRevenue2Unit != ""},
-GrossOperatingRevenue:        sql.NullString{String: finance.GrossOperatingRevenue, Valid: finance.GrossOperatingRevenue != ""},
-GrossOperatingRevenueUnit:    sql.NullString{String: finance.GrossOperatingRevenueUnit, Valid: finance.GrossOperatingRevenueUnit != ""},
-OrdinaryRevenue:              sql.NullString{String: finance.OrdinaryRevenue, Valid: finance.OrdinaryRevenue != ""},
-OrdinaryRevenueUnit:          sql.NullString{String: finance.OrdinaryRevenueUnit, Valid: finance.OrdinaryRevenueUnit != ""},
-NetPremiumsWritten:           sql.NullString{String: finance.NetPremiumsWritten, Valid: finance.NetPremiumsWritten != ""},
-NetPremiumsWrittenUnit:       sql.NullString{String: finance.NetPremiumsWrittenUnit, Valid: finance.NetPremiumsWrittenUnit != ""},
-OrdinaryIncome:               sql.NullString{String: finance.OrdinaryIncome, Valid: finance.OrdinaryIncome != ""},
-OrdinaryIncomeUnit:           sql.NullString{String: finance.OrdinaryIncomeUnit, Valid: finance.OrdinaryIncomeUnit != ""},
-NetIncome:                    sql.NullString{String: finance.NetIncome, Valid: finance.NetIncome != ""},
-NetIncomeUnit:                sql.NullString{String: finance.NetIncomeUnit, Valid: finance.NetIncomeUnit != ""},
-CapitalStock:                 sql.NullString{String: finance.CapitalStock, Valid: finance.CapitalStock != ""},
-CapitalStockUnit:             sql.NullString{String: finance.CapitalStockUnit, Valid: finance.CapitalStockUnit != ""},
-NetAssets:                    sql.NullString{String: finance.NetAssets, Valid: finance.NetAssets != ""},
-NetAssetsUnit:                sql.NullString{String: finance.NetAssetsUnit, Valid: finance.NetAssetsUnit != ""},
-TotalAssets:                  sql.NullString{String: finance.TotalAssets, Valid: finance.TotalAssets != ""},
-TotalAssetsUnit:              sql.NullString{String: finance.TotalAssetsUnit, Valid: finance.TotalAssetsUnit != ""},
-NumberOfEmployees:            sql.NullString{String: finance.NumberOfEmployees, Valid: finance.NumberOfEmployees != ""},
-NumberOfEmployeesUnit:        sql.NullString{String: finance.NumberOfEmployeesUnit, Valid: finance.NumberOfEmployeesUnit != ""},
-MajorShareholder1:            sql.NullString{String: finance.MajorShareholder1, Valid: finance.MajorShareholder1 != ""},
-ShareholdingRatio1:           sql.NullString{String: finance.ShareholdingRatio1, Valid: finance.ShareholdingRatio1 != ""},
-MajorShareholder2:            sql.NullString{String: finance.MajorShareholder2, Valid: finance.MajorShareholder2 != ""},
-ShareholdingRatio2:           sql.NullString{String: finance.ShareholdingRatio2, Valid: finance.ShareholdingRatio2 != ""},
-MajorShareholder3:            sql.NullString{String: finance.MajorShareholder3, Valid: finance.MajorShareholder3 != ""},
-ShareholdingRatio3:           sql.NullString{String: finance.ShareholdingRatio3, Valid: finance.ShareholdingRatio3 != ""},
-MajorShareholder4:            sql.NullString{String: finance.MajorShareholder4, Valid: finance.MajorShareholder4 != ""},
-ShareholdingRatio4:           sql.NullString{String: finance.ShareholdingRatio4, Valid: finance.ShareholdingRatio4 != ""},
-MajorShareholder5:            sql.NullString{String: finance.MajorShareholder5, Valid: finance.MajorShareholder5 != ""},
-ShareholdingRatio5:           sql.NullString{String: finance.ShareholdingRatio5, Valid: finance.ShareholdingRatio5 != ""},
-})
+			ID:                           finance.ID,
+			CorporateNumber:              finance.CorporateNumber,
+			CorporateNameFromNumber:      sql.NullString{String: finance.CorporateNameFromNumber, Valid: finance.CorporateNameFromNumber != ""},
+			HeadOfficeLocationFromNumber: sql.NullString{String: finance.HeadOfficeLocationFromNumber, Valid: finance.HeadOfficeLocationFromNumber != ""},
+			CorporateName:                sql.NullString{String: finance.CorporateName, Valid: finance.CorporateName != ""},
+			HeadOfficeLocation:           sql.NullString{String: finance.HeadOfficeLocation, Valid: finance.HeadOfficeLocation != ""},
+			AccountingStandards:          sql.NullString{String: finance.AccountingStandards, Valid: finance.AccountingStandards != ""},
+			BusinessYear:                 sql.NullString{String: finance.BusinessYear, Valid: finance.BusinessYear != ""},
+			PeriodNumber:                 sql.NullString{String: finance.PeriodNumber, Valid: finance.PeriodNumber != ""},
+			SalesRevenue:                 sql.NullString{String: finance.SalesRevenue, Valid: finance.SalesRevenue != ""},
+			SalesRevenueUnit:             sql.NullString{String: finance.SalesRevenueUnit, Valid: finance.SalesRevenueUnit != ""},
+			OperatingRevenue1:            sql.NullString{String: finance.OperatingRevenue1, Valid: finance.OperatingRevenue1 != ""},
+			OperatingRevenue1Unit:        sql.NullString{String: finance.OperatingRevenue1Unit, Valid: finance.OperatingRevenue1Unit != ""},
+			OperatingRevenue2:            sql.NullString{String: finance.OperatingRevenue2, Valid: finance.OperatingRevenue2 != ""},
+			OperatingRevenue2Unit:        sql.NullString{String: finance.OperatingRevenue2Unit, Valid: finance.OperatingRevenue2Unit != ""},
+			GrossOperatingRevenue:        sql.NullString{String: finance.GrossOperatingRevenue, Valid: finance.GrossOperatingRevenue != ""},
+			GrossOperatingRevenueUnit:    sql.NullString{String: finance.GrossOperatingRevenueUnit, Valid: finance.GrossOperatingRevenueUnit != ""},
+			OrdinaryRevenue:              sql.NullString{String: finance.OrdinaryRevenue, Valid: finance.OrdinaryRevenue != ""},
+			OrdinaryRevenueUnit:          sql.NullString{String: finance.OrdinaryRevenueUnit, Valid: finance.OrdinaryRevenueUnit != ""},
+			NetPremiumsWritten:           sql.NullString{String: finance.NetPremiumsWritten, Valid: finance.NetPremiumsWritten != ""},
+			NetPremiumsWrittenUnit:       sql.NullString{String: finance.NetPremiumsWrittenUnit, Valid: finance.NetPremiumsWrittenUnit != ""},
+			OrdinaryIncome:               sql.NullString{String: finance.OrdinaryIncome, Valid: finance.OrdinaryIncome != ""},
+			OrdinaryIncomeUnit:           sql.NullString{String: finance.OrdinaryIncomeUnit, Valid: finance.OrdinaryIncomeUnit != ""},
+			NetIncome:                    sql.NullString{String: finance.NetIncome, Valid: finance.NetIncome != ""},
+			NetIncomeUnit:                sql.NullString{String: finance.NetIncomeUnit, Valid: finance.NetIncomeUnit != ""},
+			CapitalStock:                 sql.NullString{String: finance.CapitalStock, Valid: finance.CapitalStock != ""},
+			CapitalStockUnit:             sql.NullString{String: finance.CapitalStockUnit, Valid: finance.CapitalStockUnit != ""},
+			NetAssets:                    sql.NullString{String: finance.NetAssets, Valid: finance.NetAssets != ""},
+			NetAssetsUnit:                sql.NullString{String: finance.NetAssetsUnit, Valid: finance.NetAssetsUnit != ""},
+			TotalAssets:                  sql.NullString{String: finance.TotalAssets, Valid: finance.TotalAssets != ""},
+			TotalAssetsUnit:              sql.NullString{String: finance.TotalAssetsUnit, Valid: finance.TotalAssetsUnit != ""},
+			NumberOfEmployees:            sql.NullString{String: finance.NumberOfEmployees, Valid: finance.NumberOfEmployees != ""},
+			NumberOfEmployeesUnit:        sql.NullString{String: finance.NumberOfEmployeesUnit, Valid: finance.NumberOfEmployeesUnit != ""},
+			MajorShareholder1:            sql.NullString{String: finance.MajorShareholder1, Valid: finance.MajorShareholder1 != ""},
+			ShareholdingRatio1:           sql.NullString{String: finance.ShareholdingRatio1, Valid: finance.ShareholdingRatio1 != ""},
+			MajorShareholder2:            sql.NullString{String: finance.MajorShareholder2, Valid: finance.MajorShareholder2 != ""},
+			ShareholdingRatio2:           sql.NullString{String: finance.ShareholdingRatio2, Valid: finance.ShareholdingRatio2 != ""},
+			MajorShareholder3:            sql.NullString{String: finance.MajorShareholder3, Valid: finance.MajorShareholder3 != ""},
+			ShareholdingRatio3:           sql.NullString{String: finance.ShareholdingRatio3, Valid: finance.ShareholdingRatio3 != ""},
+			MajorShareholder4:            sql.NullString{String: finance.MajorShareholder4, Valid: finance.MajorShareholder4 != ""},
+			ShareholdingRatio4:           sql.NullString{String: finance.ShareholdingRatio4, Valid: finance.ShareholdingRatio4 != ""},
+			MajorShareholder5:            sql.NullString{String: finance.MajorShareholder5, Valid: finance.MajorShareholder5 != ""},
+			ShareholdingRatio5:           sql.NullString{String: finance.ShareholdingRatio5, Valid: finance.ShareholdingRatio5 != ""},
+		})
 		if err != nil {
 			return err
 		}
@@ -180,7 +195,7 @@ func (r *FinanceRepository) DeleteByCorporateNumber(corporateNumber string) erro
 
 func (r *FinanceRepository) convertToFinance(finance db.Finance) *domain.Finance {
 	return &domain.Finance{
-		ID:                           int(finance.ID),
+		ID:                           finance.ID,
 		CorporateNumber:              finance.CorporateNumber,
 		CorporateNameFromNumber:      finance.CorporateNameFromNumber.String,
 		HeadOfficeLocationFromNumber: finance.HeadOfficeLocationFromNumber.String,

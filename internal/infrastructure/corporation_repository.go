@@ -9,6 +9,7 @@ import (
 	"corporation-db/internal/domain"
 	"corporation-db/internal/infrastructure/db"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 )
 
@@ -101,8 +102,8 @@ func (r *CorporationRepository) GetWithFilter(ctx context.Context, filter domain
 }
 
 // GetByID retrieves a corporation by ID
-func (r *CorporationRepository) GetByID(ctx context.Context, id int64) (*domain.Corporation, error) {
-	dbCorp, err := r.queries.GetCorporationByID(ctx, int32(id))
+func (r *CorporationRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Corporation, error) {
+	dbCorp, err := r.queries.GetCorporationByID(ctx, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, domain.ErrCorporationNotFound
@@ -121,6 +122,50 @@ func (r *CorporationRepository) GetByCorporateNumber(ctx context.Context, corpor
 			return nil, domain.ErrCorporationNotFound
 		}
 		return nil, fmt.Errorf("failed to get corporation by corporate number: %w", err)
+	}
+
+	return r.convertToDomain(&dbCorp), nil
+}
+
+// Create creates a new corporation with auto-generated UUIDv7
+func (r *CorporationRepository) Create(ctx context.Context, corp *domain.Corporation) (*domain.Corporation, error) {
+	// Generate UUIDv7 if not already set
+	if corp.ID == uuid.Nil {
+		corp.ID = domain.NewUUIDv7()
+	}
+
+	params := db.CreateCorporationParams{
+		ID:                     corp.ID,
+		CorporateNumber:        corp.CorporateNumber,
+		Name:                   corp.Name,
+		Kana:                   r.stringToNullString(corp.Kana),
+		NameEn:                 r.stringToNullString(corp.NameEn),
+		SearchName:             r.stringToNullString(corp.SearchName),
+		PostalCode:             r.stringToNullString(corp.PostalCode),
+		Location:               r.stringToNullString(corp.Location),
+		PrefectureCode:         r.stringToNullString(corp.PrefectureCode),
+		Status:                 corp.Status,
+		CloseDate:              r.timeToNullTime(corp.CloseDate),
+		CloseCause:             r.stringToNullString(corp.CloseCause),
+		RepresentativeName:     r.stringToNullString(corp.RepresentativeName),
+		RepresentativePosition: r.stringToNullString(corp.RepresentativePosition),
+		DateOfEstablishment:    r.timeToNullTime(corp.DateOfEstablishment),
+		FoundingYear:           r.int32ToNullInt32(corp.FoundingYear),
+		CapitalStock:           r.int64ToNullInt64(corp.CapitalStock),
+		EmployeeNumber:         r.int32ToNullInt32(corp.EmployeeNumber),
+		CompanySizeMale:        r.int32ToNullInt32(corp.CompanySizeMale),
+		CompanySizeFemale:      r.int32ToNullInt32(corp.CompanySizeFemale),
+		BusinessItems:          r.stringToNullString(corp.BusinessItems),
+		BusinessSummary:        r.stringToNullString(corp.BusinessSummary),
+		CompanyUrl:             r.stringToNullString(corp.CompanyUrl),
+		QualificationGrade:     r.stringToNullString(corp.QualificationGrade),
+		NumberOfActivity:       r.stringToNullString(corp.NumberOfActivity),
+		UpdateDate:             r.timeToNullTime(corp.UpdateDate),
+	}
+
+	dbCorp, err := r.queries.CreateCorporation(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create corporation: %w", err)
 	}
 
 	return r.convertToDomain(&dbCorp), nil
@@ -157,6 +202,7 @@ func (r *CorporationRepository) BulkUpsert(ctx context.Context, corporations []*
 		// Process all records in this batch
 		for j, corp := range batch {
 			params := db.UpsertCorporationParams{
+				ID:                     domain.NewUUIDv7(), // Generate UUIDv7 for each corporation
 				CorporateNumber:        corp.CorporateNumber,
 				Name:                   corp.Name,
 				Kana:                   r.stringToNullString(corp.Kana),
@@ -207,7 +253,7 @@ func (r *CorporationRepository) BulkUpsert(ctx context.Context, corporations []*
 // convertToDomain converts a db.Corporation to domain.Corporation
 func (r *CorporationRepository) convertToDomain(dbCorp *db.Corporation) *domain.Corporation {
 	return &domain.Corporation{
-		ID:              int64(dbCorp.ID),
+		ID:              dbCorp.ID,
 		CorporateNumber: dbCorp.CorporateNumber,
 		Name:            dbCorp.Name,
 		Kana:            r.nullStringToString(dbCorp.Kana),

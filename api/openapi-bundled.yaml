@@ -173,10 +173,10 @@ components:
       type: object
       properties:
         id:
-          type: integer
-          format: int64
-          description: Corporation ID
-          example: 1
+          type: string
+          format: uuid
+          description: Corporation UUID
+          example: 01906fb7-5e1a-7d89-b8d0-123456789abc
         corporate_number:
           type: string
           description: 13-digit corporate number

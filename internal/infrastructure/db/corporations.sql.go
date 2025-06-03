@@ -8,6 +8,8 @@ package db
 import (
 	"context"
 	"database/sql"
+
+	"github.com/google/uuid"
 )
 
 const countCorporationsWithFilter = `-- name: CountCorporationsWithFilter :one
@@ -47,13 +49,13 @@ func (q *Queries) CountCorporationsWithFilter(ctx context.Context, arg CountCorp
 
 const createCorporation = `-- name: CreateCorporation :one
 INSERT INTO corporations (
-    corporate_number, name, kana, name_en, search_name, postal_code, location, prefecture_code,
+    id, corporate_number, name, kana, name_en, search_name, postal_code, location, prefecture_code,
     status, close_date, close_cause, representative_name, representative_position,
     date_of_establishment, founding_year, capital_stock, employee_number,
     company_size_male, company_size_female, business_items, business_summary,
     company_url, qualification_grade, number_of_activity, update_date
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
 )
 RETURNING id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
           prefecture_code, status, close_date, close_cause, representative_name, representative_position,
@@ -64,6 +66,7 @@ RETURNING id, corporate_number, name, kana, name_en, search_name, postal_code, l
 `
 
 type CreateCorporationParams struct {
+	ID                     uuid.UUID      `json:"id"`
 	CorporateNumber        string         `json:"corporate_number"`
 	Name                   string         `json:"name"`
 	Kana                   sql.NullString `json:"kana"`
@@ -93,6 +96,7 @@ type CreateCorporationParams struct {
 
 func (q *Queries) CreateCorporation(ctx context.Context, arg CreateCorporationParams) (Corporation, error) {
 	row := q.db.QueryRowContext(ctx, createCorporation,
+		arg.ID,
 		arg.CorporateNumber,
 		arg.Name,
 		arg.Kana,
@@ -155,11 +159,11 @@ func (q *Queries) CreateCorporation(ctx context.Context, arg CreateCorporationPa
 
 const deleteCorporation = `-- name: DeleteCorporation :exec
 DELETE FROM corporations
-WHERE id = $1
+WHERE id = $1::uuid
 `
 
-func (q *Queries) DeleteCorporation(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteCorporation, id)
+func (q *Queries) DeleteCorporation(ctx context.Context, dollar_1 uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteCorporation, dollar_1)
 	return err
 }
 
@@ -228,11 +232,11 @@ SELECT id, corporate_number, name, kana, name_en, search_name, postal_code, loca
        company_url, qualification_grade, number_of_activity, update_date,
        created_at, updated_at 
 FROM corporations 
-WHERE id = $1 LIMIT 1
+WHERE id = $1::uuid LIMIT 1
 `
 
-func (q *Queries) GetCorporationByID(ctx context.Context, id int32) (Corporation, error) {
-	row := q.db.QueryRowContext(ctx, getCorporationByID, id)
+func (q *Queries) GetCorporationByID(ctx context.Context, dollar_1 uuid.UUID) (Corporation, error) {
+	row := q.db.QueryRowContext(ctx, getCorporationByID, dollar_1)
 	var i Corporation
 	err := row.Scan(
 		&i.ID,
@@ -432,7 +436,7 @@ SET name = $2, kana = $3, name_en = $4, search_name = $5, postal_code = $6, loca
     company_size_female = $19, business_items = $20, business_summary = $21,
     company_url = $22, qualification_grade = $23, number_of_activity = $24,
     update_date = $25, updated_at = NOW()
-WHERE id = $1
+WHERE id = $1::uuid
 RETURNING id, corporate_number, name, kana, name_en, search_name, postal_code, location, 
           prefecture_code, status, close_date, close_cause, representative_name, representative_position,
           date_of_establishment, founding_year, capital_stock, employee_number,
@@ -442,7 +446,7 @@ RETURNING id, corporate_number, name, kana, name_en, search_name, postal_code, l
 `
 
 type UpdateCorporationParams struct {
-	ID                     int32          `json:"id"`
+	Column1                uuid.UUID      `json:"column_1"`
 	Name                   string         `json:"name"`
 	Kana                   sql.NullString `json:"kana"`
 	NameEn                 sql.NullString `json:"name_en"`
@@ -471,7 +475,7 @@ type UpdateCorporationParams struct {
 
 func (q *Queries) UpdateCorporation(ctx context.Context, arg UpdateCorporationParams) (Corporation, error) {
 	row := q.db.QueryRowContext(ctx, updateCorporation,
-		arg.ID,
+		arg.Column1,
 		arg.Name,
 		arg.Kana,
 		arg.NameEn,
@@ -533,13 +537,13 @@ func (q *Queries) UpdateCorporation(ctx context.Context, arg UpdateCorporationPa
 
 const upsertCorporation = `-- name: UpsertCorporation :one
 INSERT INTO corporations (
-    corporate_number, name, kana, name_en, search_name, postal_code, location, prefecture_code,
+    id, corporate_number, name, kana, name_en, search_name, postal_code, location, prefecture_code,
     status, close_date, close_cause, representative_name, representative_position,
     date_of_establishment, founding_year, capital_stock, employee_number,
     company_size_male, company_size_female, business_items, business_summary,
     company_url, qualification_grade, number_of_activity, update_date
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
 )
 ON CONFLICT (corporate_number)
 DO UPDATE SET
@@ -577,6 +581,7 @@ RETURNING id, corporate_number, name, kana, name_en, search_name, postal_code, l
 `
 
 type UpsertCorporationParams struct {
+	ID                     uuid.UUID      `json:"id"`
 	CorporateNumber        string         `json:"corporate_number"`
 	Name                   string         `json:"name"`
 	Kana                   sql.NullString `json:"kana"`
@@ -606,6 +611,7 @@ type UpsertCorporationParams struct {
 
 func (q *Queries) UpsertCorporation(ctx context.Context, arg UpsertCorporationParams) (Corporation, error) {
 	row := q.db.QueryRowContext(ctx, upsertCorporation,
+		arg.ID,
 		arg.CorporateNumber,
 		arg.Name,
 		arg.Kana,

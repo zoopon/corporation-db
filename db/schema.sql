@@ -1,9 +1,12 @@
 -- db/schema.sql
 -- Full database schema for sqldef based on gBizINFO official API specification
 
+-- Enable UUID extension for PostgreSQL
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- 法人情報テーブル (Based on gBizINFO REST API specification)
 CREATE TABLE corporations (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY,
     
     -- Basic Information (基本情報)
     corporate_number CHAR(13) UNIQUE NOT NULL,           -- corporate_number
@@ -62,7 +65,7 @@ CREATE INDEX idx_corporations_created_at ON corporations(created_at);
 
 -- 財務情報テーブル (Based on gBizINFO Finance CSV and API specification)
 CREATE TABLE finances (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY,
     
     -- 基本情報 (Basic Information)
     corporate_number CHAR(13) NOT NULL,                  -- 法人番号

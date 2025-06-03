@@ -835,9 +835,8 @@ func (c *GBizClient) parseFinanceCSVRecord(headers []string, record []string) (*
 		return nil, fmt.Errorf("invalid corporate number: %s", corporateNumber)
 	}
 
-	finance := &domain.Finance{
-		CorporateNumber: corporateNumber,
-	}
+	// Use domain constructor to create Finance with UUIDv7
+	finance := domain.NewFinance(corporateNumber)
 
 	// Map CSV fields to Finance structure based on gBizINFO finance CSV specification
 	if val, exists := fieldMap["法人名（法人番号）"]; exists && val != "" {

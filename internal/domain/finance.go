@@ -1,13 +1,15 @@
 package domain
 
 import (
-"time"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 // Finance represents financial information of a corporation
 // Based on gBizINFO Finance CSV specification
 type Finance struct {
-	ID                           int       `json:"id" db:"id"`
+	ID                           uuid.UUID `json:"id" db:"id"`
 	CorporateNumber              string    `json:"corporate_number" db:"corporate_number"`
 	CorporateNameFromNumber      string    `json:"corporate_name_from_number" db:"corporate_name_from_number"`
 	HeadOfficeLocationFromNumber string    `json:"head_office_location_from_number" db:"head_office_location_from_number"`
@@ -76,4 +78,16 @@ type FinanceRepository interface {
 
 	// DeleteByCorporateNumber removes all finance records for a specific corporate number
 	DeleteByCorporateNumber(corporateNumber string) error
+}
+
+// NewFinance creates a new Finance with a UUIDv7 primary key
+func NewFinance(corporateNumber string) *Finance {
+	now := time.Now()
+
+	return &Finance{
+		ID:              MustNewUUIDv7(), // Generate UUIDv7 for better DB performance
+		CorporateNumber: corporateNumber,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
 }

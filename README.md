@@ -137,10 +137,12 @@ docker compose exec db psql -U postgres -d corporation_db -c "\dt"
 
 ### 📥 ステップ 2: データ取得バッチ実行
 
+#### 企業基本情報のダウンロード
+
 ```bash
 # ダウンロード用コンテナでデータ取得（推奨）
 docker compose run --rm download ./download \
-  -output /data/gbiz_$(date +%Y%m%d_%H%M%S).zip
+  -output /data/gbiz_$(date +"%Y%m%d").zip
 
 # または、固定ファイル名でダウンロード
 docker compose run --rm download ./download \
@@ -148,6 +150,41 @@ docker compose run --rm download ./download \
 
 # Makefileターゲット使用（推奨）
 make download-data-docker
+```
+
+#### 財務情報のダウンロード
+
+```bash
+# 財務情報のダウンロード（タイムスタンプ付きファイル名）
+docker compose run --rm download-finance ./download-finance \
+  -output /data/finance_$(date +"%Y%m%d").zip
+
+# または、固定ファイル名でダウンロード
+docker compose run --rm download-finance ./download-finance \
+  -output /data/finance_latest.zip
+
+# Makefileターゲット使用（推奨）
+make finance-download-data-docker
+```
+
+**コマンドオプション:**
+- `-output` : 保存先ファイルパス（必須）
+- `-api-key` : gBizINFO APIキー（環境変数 `GBIZ_API_KEY` でも設定可能）
+- `-debug` : デバッグ出力を有効化
+
+**実行例:**
+```bash
+# 環境変数でAPIキーを設定して実行
+GBIZ_API_KEY=your_api_key docker compose run --rm download-finance ./download-finance \
+  -output /data/finance_$(date +"%Y%m%d").zip
+
+# デバッグモードで実行
+docker compose run --rm download-finance ./download-finance \
+  -output /data/finance_debug.zip \
+  -debug
+
+# ローカル環境での実行（事前にmake finance-download-buildが必要）
+./bin/download-finance -output ./data/finance_local.zip -api-key your_api_key
 ```
 
 **確認ポイント:**
@@ -158,6 +195,8 @@ make download-data-docker
 ---
 
 ### 📊 ステップ 3: データインポートバッチ実行
+
+#### 企業基本情報のインポート
 
 ```bash
 # ダウンロードしたZIPファイルをインポート
@@ -174,10 +213,68 @@ docker compose run --rm import go run ./cmd/import \
   -dry-run
 ```
 
+#### 財務情報のインポート
+
+```bash
+#### 財務情報のインポート
+
+```bash
+# 財務データのインポート
+docker compose run --rm import-finance ./import-finance \
+  -input /data/finance_latest.zip
+
+# または、特定のタイムスタンプ付きファイルをインポート
+docker compose run --rm import-finance ./import-finance \
+  -input /data/finance_20241231_120000.zip
+
+# Makefileターゲット使用（推奨）
+make finance-import-data-docker
+
+# dry-runで事前確認（実際にはインポートしない）
+docker compose run --rm import-finance ./import-finance \
+  -input /data/finance_latest.zip \
+  -dry-run
+```
+
+**コマンドオプション:**
+- `-input` : インポートするZIPファイルパス（必須）
+- `-dry-run` : 実際のインポートは行わず、処理内容のみ表示
+- `-batch-size` : バッチサイズ（デフォルト: 500）
+- `-db-host` : データベースホスト（環境変数 `DB_HOST` でも設定可能）
+- `-db-port` : データベースポート（環境変数 `DB_PORT` でも設定可能）
+- `-db-user` : データベースユーザー（環境変数 `DB_USER` でも設定可能）
+- `-db-password` : データベースパスワード（環境変数 `DB_PASSWORD` でも設定可能）
+- `-db-name` : データベース名（環境変数 `DB_NAME` でも設定可能）
+
+**実行例:**
+```bash
+# カスタムバッチサイズでインポート
+docker compose run --rm import-finance ./import-finance \
+  -input /data/finance_latest.zip \
+  -batch-size 1000
+
+# ローカル環境での実行（事前にmake finance-import-buildが必要）
+./bin/import-finance -input ./data/finance_latest.zip -dry-run
+
+# 環境変数で設定したデータベースを使用
+DB_HOST=production.db.com DB_USER=admin ./bin/import-finance \
+  -input ./data/finance_production.zip
+```
+
+**処理される財務データ項目（42フィールド）:**
+- 基本情報: 法人番号、法人名、本店所在地
+- 会計情報: 会計基準、事業年度、期間番号
+- 収益項目: 売上高、営業収益、経常収益等
+- 財務項目: 純利益、資本金、純資産、総資産
+- 人員情報: 従業員数
+- 株主情報: 主要株主5社とその持株比率
+```
+
 **確認ポイント:**
 - ✅ CSVファイルが正常に解析される
-- ✅ 都道府県コードが自動抽出される
+- ✅ 都道府県コードが自動抽出される（企業基本情報）
 - ✅ データベースにレコードが保存される
+- ✅ 財務情報では42フィールドのデータが正しく処理される
 
 ---
 
@@ -307,6 +404,8 @@ docker compose exec db psql -U postgres -d corporation_db -c "\dt"
 docker compose exec db psql -U postgres -d corporation_db -c "
   SELECT 'corporations' as table_name, COUNT(*) as record_count FROM corporations
   UNION ALL
+  SELECT 'finances' as table_name, COUNT(*) as record_count FROM finances
+  UNION ALL
   SELECT 'users' as table_name, COUNT(*) as record_count FROM users;"
 
 # 都道府県別の法人数統計
@@ -317,9 +416,55 @@ docker compose exec db psql -U postgres -d corporation_db -c "
   GROUP BY prefecture_code 
   ORDER BY prefecture_code;"
 
+# 財務情報の統計
+docker compose exec db psql -U postgres -d corporation_db -c "
+  SELECT 
+    COUNT(*) as total_finance_records,
+    COUNT(DISTINCT corporate_number) as unique_corporations_with_finance,
+    COUNT(CASE WHEN sales_revenue IS NOT NULL AND sales_revenue != '' THEN 1 END) as records_with_sales,
+    MIN(created_at) as oldest_finance_record,
+    MAX(created_at) as newest_finance_record
+  FROM finances;"
+
+# 企業基本情報と財務情報の結合状況
+docker compose exec db psql -U postgres -d corporation_db -c "
+  SELECT 
+    'corporations_only' as data_type,
+    COUNT(*) as count
+  FROM corporations c
+  LEFT JOIN finances f ON c.corporate_number = f.corporate_number
+  WHERE f.corporate_number IS NULL
+  
+  UNION ALL
+  
+  SELECT 
+    'with_finance_data' as data_type,
+    COUNT(DISTINCT c.corporate_number) as count
+  FROM corporations c
+  INNER JOIN finances f ON c.corporate_number = f.corporate_number
+  
+  UNION ALL
+  
+  SELECT 
+    'finance_only' as data_type,
+    COUNT(*) as count
+  FROM finances f
+  LEFT JOIN corporations c ON f.corporate_number = c.corporate_number
+  WHERE c.corporate_number IS NULL;"
+
 # データベースサイズ確認
 docker compose exec db psql -U postgres -d corporation_db -c "
   SELECT pg_size_pretty(pg_database_size('corporation_db')) as database_size;"
+
+# テーブル別サイズ確認
+docker compose exec db psql -U postgres -d corporation_db -c "
+  SELECT 
+    schemaname,
+    tablename,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
+  FROM pg_tables 
+  WHERE schemaname = 'public' 
+  ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;"
 ```
 
 #### データベース接続エラー
@@ -346,6 +491,34 @@ docker compose run --rm import go run ./cmd/import -input /data/gbiz_latest.zip 
 docker compose exec db psql -U postgres -d corporation_db -c "SELECT COUNT(*) FROM corporations WHERE prefecture_code IS NOT NULL;"
 ```
 
+#### 財務情報関連エラー
+```bash
+# 財務情報ダウンロードログ確認
+docker compose logs download-finance
+
+# 財務情報インポートログ確認
+docker compose logs import-finance
+
+# 財務情報dry-runで事前確認
+docker compose run --rm import-finance ./import-finance \
+  -input /data/finance_latest.zip \
+  -dry-run
+
+# 財務情報データベース状態確認
+docker compose exec db psql -U postgres -d corporation_db -c "
+  SELECT COUNT(*) as total_records,
+         COUNT(DISTINCT corporate_number) as unique_corporations,
+         MIN(created_at) as oldest_record,
+         MAX(created_at) as newest_record
+  FROM finances;"
+
+# 財務情報テーブルのサンプルデータ確認
+docker compose exec db psql -U postgres -d corporation_db -c "
+  SELECT corporate_number, corporate_name, business_year, sales_revenue 
+  FROM finances 
+  LIMIT 5;"
+```
+
 #### APIサーバーエラー
 ```bash
 # APIサーバーログ確認
@@ -370,7 +543,7 @@ docker compose restart app
 set -e
 
 # 現在日時のファイル名
-FILENAME="gbiz_$(date +%Y%m%d_%H%M%S).zip"
+FILENAME="gbiz_$(date +"%Y%m%d").zip"
 
 echo "Starting gBizINFO data update..."
 
@@ -397,14 +570,112 @@ curl -f http://localhost:8080/health
 echo "Data update completed successfully!"
 ```
 
+#### 財務データ更新スクリプト例
+```bash
+#!/bin/bash
+# update_finance_data.sh
+
+set -e
+
+# 現在日時のファイル名
+FINANCE_FILENAME="finance_$(date +"%Y%m%d").zip"
+
+echo "Starting gBizINFO finance data update..."
+
+# 1. データベース起動確認
+docker compose up -d db
+sleep 10
+
+# 2. 財務データをダウンロード
+echo "Downloading latest finance data..."
+docker compose run --rm download-finance ./download-finance -output "/data/$FINANCE_FILENAME"
+
+# 3. 財務データをインポート
+echo "Importing finance data..."
+docker compose run --rm import-finance ./import-finance -input "/data/$FINANCE_FILENAME"
+
+# 4. APIサーバー起動
+echo "Starting API server..."
+docker compose up -d app
+
+# 5. 動作確認
+sleep 5
+curl -f http://localhost:8080/health
+
+echo "Finance data update completed successfully!"
+```
+
+#### 全データ更新スクリプト例
+```bash
+#!/bin/bash
+# update_all_data.sh
+
+set -e
+
+# 現在日時のファイル名
+GBIZ_FILENAME="gbiz_$(date +"%Y%m%d").zip"
+FINANCE_FILENAME="finance_$(date +"%Y%m%d").zip"
+
+echo "Starting complete gBizINFO data update..."
+
+# 1. データベース起動確認
+docker compose up -d db
+sleep 10
+
+# 2. 企業基本情報をダウンロード
+echo "Downloading corporate data..."
+docker compose run --rm download ./download -output "/data/$GBIZ_FILENAME"
+
+# 3. 財務情報をダウンロード
+echo "Downloading finance data..."
+docker compose run --rm download-finance ./download-finance -output "/data/$FINANCE_FILENAME"
+
+# 4. 企業基本情報をインポート
+echo "Importing corporate data..."
+docker compose run --rm import go run ./cmd/import -input "/data/$GBIZ_FILENAME"
+
+# 5. 財務情報をインポート
+echo "Importing finance data..."
+docker compose run --rm import-finance ./import-finance -input "/data/$FINANCE_FILENAME"
+
+# 6. APIサーバー起動
+echo "Starting API server..."
+docker compose up -d app
+
+# 7. 動作確認
+sleep 5
+curl -f http://localhost:8080/health
+
+echo "Complete data update finished successfully!"
+```
+
 #### 使用方法
 ```bash
-# スクリプトに実行権限を付与
+# 企業基本情報更新スクリプトに実行権限を付与
 chmod +x update_gbiz_data.sh
 
-# 実行
+# 財務情報更新スクリプトに実行権限を付与
+chmod +x update_finance_data.sh
+
+# 全データ更新スクリプトに実行権限を付与
+chmod +x update_all_data.sh
+
+# 企業基本情報のみ更新
 ./update_gbiz_data.sh
+
+# 財務情報のみ更新
+./update_finance_data.sh
+
+# 全データを更新（推奨）
+./update_all_data.sh
 ```
+
+**スクリプトの特徴:**
+- ✅ エラー時の自動停止（`set -e`）
+- ✅ タイムスタンプ付きファイル名で重複回避
+- ✅ 段階的な実行と確認
+- ✅ データベース起動待機時間の確保
+- ✅ 最終的なヘルスチェック
 
 ---
 
@@ -446,10 +717,10 @@ docker compose down -v
 1. **Makefile修正**: Docker引数渡し問題の解決
    ```makefile
    # 修正前（引数が正しく渡されない）
-   docker compose run --rm download -output /data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
+   docker compose run --rm download -output /data/gbiz_$(shell date +"%Y%m%d").zip
 
    # 修正後（バイナリパスを明示的に指定）
-   docker compose run --rm download ./download -output /data/gbiz_$(shell date +%Y%m%d_%H%M%S).zip
+   docker compose run --rm download ./download -output /data/gbiz_$(shell date +"%Y%m%d").zip
    ```
 
 2. **ファイルシステム修正**: `cmd/download/main.go`
@@ -532,27 +803,63 @@ gBizINFOから提供される企業の財務情報（売上高、純利益、資
 
 #### 財務データのダウンロード
 ```bash
-# ローカル環境でダウンロード
+# ローカル環境でダウンロード（事前ビルドが必要）
+make finance-download-build
 make finance-download-data
 
-# Docker環境でダウンロード
+# Docker環境でダウンロード（推奨）
 make finance-download-data-docker
 
-# 手動実行（カスタムオプション）
-./bin/download-finance -output ./data/my_finance_data.zip
+# または、手動でDocker環境実行
+docker compose run --rm download-finance ./download-finance \
+  -output /data/finance_$(date +"%Y%m%d").zip
+
+# APIキー指定でカスタム実行
+GBIZ_API_KEY=your_api_key docker compose run --rm download-finance ./download-finance \
+  -output /data/finance_custom.zip \
+  -debug
+
+# 手動実行（ローカルビルド後）
+./bin/download-finance -output ./data/my_finance_data.zip -api-key your_api_key
 ```
+
+**利用可能オプション:**
+- `-output` : 保存先ZIPファイルパス（必須）
+- `-api-key` : gBizINFO APIキー（環境変数 `GBIZ_API_KEY` でも設定可能）
+- `-debug` : 詳細なデバッグ出力を表示
 
 #### 財務データのインポート
 ```bash
-# ローカル環境でインポート
+# ローカル環境でインポート（事前ビルドが必要）
+make finance-import-build
 make finance-import-data
 
-# Docker環境でインポート
+# Docker環境でインポート（推奨）
 make finance-import-data-docker
 
-# 手動実行
-./bin/import-finance -input ./data/finance_20250602_120000.zip
+# または、手動でDocker環境実行
+docker compose run --rm import-finance ./import-finance \
+  -input /data/finance_latest.zip
+
+# dry-runで事前確認
+docker compose run --rm import-finance ./import-finance \
+  -input /data/finance_latest.zip \
+  -dry-run
+
+# カスタムバッチサイズで実行
+docker compose run --rm import-finance ./import-finance \
+  -input /data/finance_latest.zip \
+  -batch-size 1000
+
+# 手動実行（ローカルビルド後）
+./bin/import-finance -input ./data/finance_20250602_120000.zip -dry-run
 ```
+
+**利用可能オプション:**
+- `-input` : インポートするZIPファイルパス（必須）
+- `-dry-run` : 実際のインポートは行わず、処理内容のみ表示
+- `-batch-size` : 一度に処理するレコード数（デフォルト: 500）
+- `-db-host`, `-db-port`, `-db-user`, `-db-password`, `-db-name` : データベース接続設定
 
 #### コマンドビルド
 ```bash

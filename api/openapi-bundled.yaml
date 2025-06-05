@@ -167,6 +167,75 @@ paths:
                 properties:
                   error:
                     type: string
+  /corporations/{corporate_number}/fetch-bases:
+    post:
+      summary: Fetch base/branch offices using OpenAI
+      description: |
+        Fetch base/branch offices information for a corporation using OpenAI API.
+        This endpoint:
+        1. Gets URLs of official company website pages containing office information
+        2. Extracts office information from those URLs 
+        3. Saves the extracted information to the database
+      operationId: fetchCorporationBases
+      parameters:
+        - name: corporate_number
+          in: path
+          required: true
+          description: The corporate number
+          schema:
+            type: string
+            pattern: ^[0-9]{13}$
+      responses:
+        '200':
+          description: Successfully fetched and saved base/branch offices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Successfully fetched and saved base/branch offices
+                  bases_count:
+                    type: integer
+                    example: 5
+                  urls_found:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - https://example.com/company/offices
+                      - https://example.com/about/locations
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Invalid corporate number format
+        '404':
+          description: Corporation not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Corporation not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Failed to fetch bases information
 components:
   schemas:
     Corporation:

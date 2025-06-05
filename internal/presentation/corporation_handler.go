@@ -14,12 +14,14 @@ import (
 type CorporationHandler struct {
 	corporationUsecase *usecase.CorporationUsecase
 	baseUsecase        *usecase.BaseUsecase
+	fetchBasesUsecase  *usecase.FetchBasesUseCase
 }
 
-func NewCorporationHandler(corporationUsecase *usecase.CorporationUsecase, baseUsecase *usecase.BaseUsecase) *CorporationHandler {
+func NewCorporationHandler(corporationUsecase *usecase.CorporationUsecase, baseUsecase *usecase.BaseUsecase, fetchBasesUsecase *usecase.FetchBasesUseCase) *CorporationHandler {
 	return &CorporationHandler{
 		corporationUsecase: corporationUsecase,
 		baseUsecase:        baseUsecase,
+		fetchBasesUsecase:  fetchBasesUsecase,
 	}
 }
 
@@ -89,6 +91,40 @@ func (h *CorporationHandler) GetCorporationsCorporateNumber(w http.ResponseWrite
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(convertCorporationToAPIWithBases(corp, bases))
+}
+
+// FetchCorporationBases implements the POST /corporations/{corporate_number}/fetch-bases endpoint
+func (h *CorporationHandler) FetchCorporationBases(w http.ResponseWriter, r *http.Request, corporateNumber string) {
+	// Validate corporate number format
+	if len(corporateNumber) != 13 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Invalid corporate number format",
+		})
+		return
+	}
+
+	// Execute fetch bases use case
+	result, err := h.fetchBasesUsecase.Execute(r.Context(), corporateNumber)
+	if err != nil {
+		if err.Error() == "failed to get corporation: sql: no rows in result set" {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "Corporation not found",
+			})
+			return
+		}
+
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Failed to fetch bases information",
+		})
+		return
+	}
+
+	// Return success response
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
 }
 
 // Helper functions for conversion between domain and API models

@@ -18,9 +18,9 @@ type Router struct {
 }
 
 // NewRouter creates a new Router
-func NewRouter(corporationUsecase *usecase.CorporationUsecase, baseUsecase *usecase.BaseUsecase) *Router {
+func NewRouter(corporationUsecase *usecase.CorporationUsecase, baseUsecase *usecase.BaseUsecase, fetchBasesUsecase *usecase.FetchBasesUseCase) *Router {
 	return &Router{
-		corporationHandler: NewCorporationHandler(corporationUsecase, baseUsecase),
+		corporationHandler: NewCorporationHandler(corporationUsecase, baseUsecase, fetchBasesUsecase),
 	}
 }
 
@@ -30,8 +30,8 @@ func (router *Router) SetupRoutes() *chi.Mux {
 
 	// CORS middleware - Allow cross-origin requests
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},              // Allow all origins for development
-		AllowedMethods:   []string{"GET", "OPTIONS"}, // Only allow read operations
+		AllowedOrigins:   []string{"*"},                      // Allow all origins for development
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS"}, // Allow POST for fetch-bases
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: false,
@@ -45,22 +45,21 @@ func (router *Router) SetupRoutes() *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.SetHeader("Content-Type", "application/json"))
 
-	// Create a server interface wrapper with our handlers
-	serverWrapper := &api.ServerInterfaceWrapper{
-		Handler: &CombinedHandler{
-			corporationHandler: router.corporationHandler,
-		},
+	// Create a combined handler that implements ServerInterface
+	combinedHandler := &CombinedHandler{
+		corporationHandler: router.corporationHandler,
+	}
+
+	// Use the generated API handler with options
+	apiHandler := api.HandlerWithOptions(combinedHandler, api.ChiServerOptions{
+		BaseURL:    "",
+		BaseRouter: r,
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		},
-	}
+	})
 
-	// Register API routes using the generated wrapper
-	r.Get("/corporations", serverWrapper.GetCorporations)
-	r.Get("/corporations/{corporate_number}", serverWrapper.GetCorporationsCorporateNumber)
-	r.Get("/health", serverWrapper.HealthCheck)
-
-	return r
+	return apiHandler.(*chi.Mux)
 }
 
 // CombinedHandler implements the ServerInterface for all endpoints
@@ -75,6 +74,11 @@ func (ch *CombinedHandler) GetCorporations(w http.ResponseWriter, r *http.Reques
 
 func (ch *CombinedHandler) GetCorporationsCorporateNumber(w http.ResponseWriter, r *http.Request, corporateNumber string) {
 	ch.corporationHandler.GetCorporationsCorporateNumber(w, r, corporateNumber)
+}
+
+// FetchCorporationBases implements the POST /corporations/{corporate_number}/fetch-bases endpoint
+func (ch *CombinedHandler) FetchCorporationBases(w http.ResponseWriter, r *http.Request, corporateNumber string) {
+	ch.corporationHandler.FetchCorporationBases(w, r, corporateNumber)
 }
 
 // Health check endpoint

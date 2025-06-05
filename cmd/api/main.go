@@ -42,11 +42,21 @@ func main() {
 	corporationUsecase := usecase.NewCorporationUsecase(corporationRepo, gbizClient, textConverter)
 	baseUsecase := usecase.NewBaseUsecase(baseRepo, corporationRepo)
 
+	// Initialize OpenAI client
+	openAIClient, err := infrastructure.NewOpenAIClient()
+	if err != nil {
+		log.Printf("Warning: OpenAI client initialization failed: %v", err)
+		log.Printf("OPENAI_API_KEY environment variable may not be set")
+	}
+
+	// Initialize fetch bases use case
+	fetchBasesUsecase := usecase.NewFetchBasesUseCase(corporationRepo, baseRepo, openAIClient)
+
 	// Set base repository in corporation usecase to avoid circular dependency
 	corporationUsecase.SetBaseRepo(baseRepo)
 
 	// Initialize router with handlers
-	router := presentation.NewRouter(corporationUsecase, baseUsecase)
+	router := presentation.NewRouter(corporationUsecase, baseUsecase, fetchBasesUsecase)
 	r := router.SetupRoutes()
 
 	// Server

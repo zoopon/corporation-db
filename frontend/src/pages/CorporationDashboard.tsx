@@ -6,28 +6,26 @@ import {
   PhoneIcon,
   GlobeAltIcon
 } from '@heroicons/react/24/outline';
-import { useCorporations, useCorporationBases, useRefreshBases } from '../services/corporationService';
-import { useAppStore } from '../stores/appStore';
+import { useCorporations, useRefreshBases } from '../services/corporationService';
 
 const CorporationDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCorporateNumber, setSelectedCorporateNumber] = useState<string>('');
   
-  const { selectedCorporation, basesLoading, basesError } = useAppStore();
-  
   // 企業一覧取得
   const { data: corporations, isLoading: corporationsLoading, error: corporationsError } = useCorporations();
   
-  // 選択された企業の拠点情報取得
-  const { data: bases } = useCorporationBases(selectedCorporateNumber);
+  // 選択された企業の詳細情報を取得（拠点情報も含む）
+  const selectedCorp = corporations?.corporations?.find(corp => corp.corporate_number === selectedCorporateNumber);
+  const bases = selectedCorp?.bases || [];
   
   // 拠点情報再取得ミューテーション
   const refreshBasesMutation = useRefreshBases();
 
   // 検索でフィルタリングされた企業リスト
-  const filteredCorporations = corporations?.filter(corp =>
+  const filteredCorporations = corporations?.corporations?.filter(corp =>
     corp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    corp.corporateNumber.includes(searchTerm)
+    corp.corporate_number.includes(searchTerm)
   ) || [];
 
   const handleCorporationSelect = (corporateNumber: string) => {
@@ -83,9 +81,9 @@ const CorporationDashboard: React.FC = () => {
                 {filteredCorporations.map((corp) => (
                   <div
                     key={corp.id}
-                    onClick={() => handleCorporationSelect(corp.corporateNumber)}
+                    onClick={() => handleCorporationSelect(corp.corporate_number)}
                     className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      selectedCorporateNumber === corp.corporateNumber ? 'bg-blue-50 border-r-2 border-blue-500' : ''
+                      selectedCorporateNumber === corp.corporate_number ? 'bg-blue-50 border-r-2 border-blue-500' : ''
                     }`}
                   >
                     <div className="flex items-start">
@@ -95,11 +93,11 @@ const CorporationDashboard: React.FC = () => {
                           {corp.name}
                         </h3>
                         <p className="text-xs text-gray-500 mt-1">
-                          法人番号: {corp.corporateNumber}
+                          法人番号: {corp.corporate_number}
                         </p>
-                        {corp.address && (
+                        {corp.location && (
                           <p className="text-xs text-gray-500 mt-1 truncate">
-                            {corp.address}
+                            {corp.location}
                           </p>
                         )}
                       </div>
@@ -125,10 +123,10 @@ const CorporationDashboard: React.FC = () => {
               {selectedCorporateNumber && (
                 <button
                   onClick={handleRefreshBases}
-                  disabled={refreshBasesMutation.isPending || basesLoading}
+                  disabled={refreshBasesMutation.isPending || corporationsLoading}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {refreshBasesMutation.isPending || basesLoading ? '取得中...' : '拠点情報を取得'}
+                  {refreshBasesMutation.isPending || corporationsLoading ? '取得中...' : '拠点情報を取得'}
                 </button>
               )}
             </div>
@@ -140,14 +138,10 @@ const CorporationDashboard: React.FC = () => {
                 <BuildingOfficeIcon className="h-12 w-12 mx-auto text-gray-300 mb-4" />
                 <p>企業を選択してください</p>
               </div>
-            ) : basesLoading || refreshBasesMutation.isPending ? (
+            ) : refreshBasesMutation.isPending ? (
               <div className="p-6 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                 <p className="mt-2 text-gray-500">拠点情報を取得中...</p>
-              </div>
-            ) : basesError ? (
-              <div className="p-6 text-center text-red-600">
-                <p>エラー: {basesError}</p>
               </div>
             ) : bases && bases.length > 0 ? (
               <div className="divide-y divide-gray-200">
@@ -157,24 +151,24 @@ const CorporationDashboard: React.FC = () => {
                       <MapPinIcon className="h-5 w-5 text-gray-400 mt-1 mr-3 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-medium text-gray-900">
-                          {base.name}
+                          {base.base_name || '拠点'}
                         </h3>
                         <p className="text-sm text-gray-600 mt-1">
-                          {base.address}
+                          {base.location}
                         </p>
                         
                         <div className="mt-2 space-y-1">
-                          {base.phoneNumber && (
+                          {base.phone_number && (
                             <div className="flex items-center text-xs text-gray-500">
                               <PhoneIcon className="h-4 w-4 mr-2" />
-                              {base.phoneNumber}
+                              {base.phone_number}
                             </div>
                           )}
-                          {base.sourceURL && (
+                          {base.data_source_url && (
                             <div className="flex items-center text-xs text-gray-500">
                               <GlobeAltIcon className="h-4 w-4 mr-2" />
                               <a 
-                                href={base.sourceURL} 
+                                href={base.data_source_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="text-blue-600 hover:text-blue-800 truncate"

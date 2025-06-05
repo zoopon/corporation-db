@@ -1,29 +1,22 @@
-import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import Layout from './components/Layout';
-import CorporationDashboard from './pages/CorporationDashboard';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import Layout from './components/Layout'
+import CorporationDashboard from './pages/CorporationDashboard'
+import './App.css'
 
-// React Query クライアントを作成
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      staleTime: 5 * 60 * 1000, // 5分
-      gcTime: 10 * 60 * 1000, // 10分（以前のcacheTime）
-    },
-  },
-});
+const queryClient = new QueryClient()
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Layout>
-        <CorporationDashboard />
-      </Layout>
-      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+      <div className="App">
+        <Layout>
+          <CorporationDashboard />
+        </Layout>
+      </div>
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
-  );
+  )
 }
 
-export default App;
+export default App

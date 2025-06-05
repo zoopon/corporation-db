@@ -29,7 +29,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1 rounded-md hover:bg-gray-100"
+            className="lg:hidden p-1 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700"
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
@@ -39,16 +39,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <nav className="flex-1 px-4 py-4 space-y-2">
           <a
             href="#"
-            className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+            className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 hover:text-gray-900"
           >
-            <BuildingOfficeIcon className="h-5 w-5 mr-3" />
+            <BuildingOfficeIcon className="h-5 w-5 mr-3 text-gray-500" />
             企業一覧
           </a>
           <a
             href="#"
-            className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+            className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 hover:text-gray-900"
           >
-            <MagnifyingGlassIcon className="h-5 w-5 mr-3" />
+            <MagnifyingGlassIcon className="h-5 w-5 mr-3 text-gray-500" />
             検索
           </a>
         </nav>
@@ -69,7 +69,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex items-center justify-between h-16 px-4">
             <button
               onClick={toggleSidebar}
-              className="lg:hidden p-1 rounded-md hover:bg-gray-100"
+              className="lg:hidden p-1 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700"
             >
               <Bars3Icon className="h-6 w-6" />
             </button>

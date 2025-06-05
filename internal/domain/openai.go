@@ -76,6 +76,7 @@ type ExtractedBase struct {
 	Longitude   float64 `json:"longitude,omitempty"`
 	PhoneNumber string  `json:"phone_number,omitempty"`
 	FaxNumber   string  `json:"fax_number,omitempty"`
+	SourceURL   string  `json:"source_url,omitempty"` // The URL where this data was extracted from
 }
 
 // OpenAIService defines the interface for OpenAI API operations

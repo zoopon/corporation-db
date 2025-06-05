@@ -111,7 +111,7 @@ URLs:
 	// Convert to domain format
 	var bases []domain.ExtractedBase
 	for _, location := range rawResult.Locations {
-		// Clean name by removing numbers at start/end
+		// Clean name by removing numbers at start/end and trimming whitespace
 		cleanName := strings.TrimSpace(location.Name)
 		if len(cleanName) > 2 {
 			// Remove leading/trailing 2-digit numbers
@@ -124,6 +124,35 @@ URLs:
 			cleanName = strings.TrimSpace(cleanName)
 		}
 
+		// Clean address by removing duplicates and trimming whitespace
+		cleanAddress := strings.TrimSpace(location.Address)
+		// Check if address contains duplicated content
+		if cleanAddress != "" {
+			// First, check if the entire address is duplicated (split by common patterns)
+			duplicatePatterns := []string{" " + cleanAddress, cleanAddress + " "}
+			for _, pattern := range duplicatePatterns {
+				if strings.Contains(cleanAddress, pattern) {
+					cleanAddress = strings.ReplaceAll(cleanAddress, pattern, "")
+					cleanAddress = strings.TrimSpace(cleanAddress)
+				}
+			}
+			
+			// Also check for exact duplicates in the middle
+			words := strings.Fields(cleanAddress)
+			if len(words) > 1 {
+				mid := len(words) / 2
+				firstHalf := strings.Join(words[:mid], " ")
+				secondHalf := strings.Join(words[mid:], " ")
+				
+				if firstHalf == secondHalf {
+					cleanAddress = firstHalf
+				}
+			}
+			
+			// Remove any remaining excessive whitespace
+			cleanAddress = strings.Join(strings.Fields(cleanAddress), " ")
+		}
+
 		// Determine office type based on name
 		officeType := "branch_office"
 		if strings.Contains(cleanName, "本社") || strings.Contains(cleanName, "本店") || strings.Contains(cleanName, "Head") {
@@ -133,17 +162,18 @@ URLs:
 		base := domain.ExtractedBase{
 			Name:        cleanName,
 			Type:        officeType,
-			PostalCode:  location.Zipcode,
+			PostalCode:  strings.TrimSpace(location.Zipcode),
 			Prefecture:  "", // Will be extracted from address
 			City:        "", // Will be extracted from address
-			Address:     location.Address,
-			PhoneNumber: location.PhoneNumber,
+			Address:     cleanAddress,
+			PhoneNumber: strings.TrimSpace(location.PhoneNumber),
 			FaxNumber:   "", // Not provided in this format
+			SourceURL:   strings.TrimSpace(location.URL),
 		}
 
 		// Try to parse prefecture and city from address
-		if location.Address != "" {
-			parts := strings.Split(location.Address, " ")
+		if cleanAddress != "" {
+			parts := strings.Fields(cleanAddress)
 			if len(parts) >= 2 {
 				base.Prefecture = parts[0]
 				base.City = parts[1]

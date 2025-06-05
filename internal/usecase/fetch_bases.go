@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"corporation-db/internal/domain"
@@ -83,11 +84,23 @@ func (uc *FetchBasesUseCase) Execute(ctx context.Context, corporateNumber string
 	// Convert extracted bases to domain entities and save to database
 	savedCount := 0
 	for _, extractedBase := range baseResult.Bases {
-		// Create location string from prefecture, city, and address
+		// Create location string from prefecture, city, and address (fix whitespace issues)
 		var location *string
 		if extractedBase.Prefecture != "" || extractedBase.City != "" || extractedBase.Address != "" {
-			locationStr := fmt.Sprintf("%s %s %s", extractedBase.Prefecture, extractedBase.City, extractedBase.Address)
-			location = &locationStr
+			var parts []string
+			if strings.TrimSpace(extractedBase.Prefecture) != "" {
+				parts = append(parts, strings.TrimSpace(extractedBase.Prefecture))
+			}
+			if strings.TrimSpace(extractedBase.City) != "" {
+				parts = append(parts, strings.TrimSpace(extractedBase.City))
+			}
+			if strings.TrimSpace(extractedBase.Address) != "" {
+				parts = append(parts, strings.TrimSpace(extractedBase.Address))
+			}
+			if len(parts) > 0 {
+				locationStr := strings.Join(parts, " ")
+				location = &locationStr
+			}
 		}
 
 		// Create postal code pointer
@@ -114,6 +127,12 @@ func (uc *FetchBasesUseCase) Execute(ctx context.Context, corporateNumber string
 			baseName = &extractedBase.Name
 		}
 
+		// Use the source URL instead of hardcoded "OpenAI API"
+		dataSourceURL := extractedBase.SourceURL
+		if dataSourceURL == "" {
+			dataSourceURL = "OpenAI API" // Fallback if URL is not available
+		}
+
 		base := &domain.Base{
 			ID:              uuid.New(),
 			CorporationID:   corporation.ID,
@@ -125,7 +144,7 @@ func (uc *FetchBasesUseCase) Execute(ctx context.Context, corporateNumber string
 			PhoneNumber:     phoneNumber,
 			FaxNumber:       faxNumber,
 			DataObtainedAt:  time.Now(),
-			DataSourceURL:   "OpenAI API",
+			DataSourceURL:   dataSourceURL,
 			IsHeadOffice:    extractedBase.Type == "head_office",
 			CreatedAt:       time.Now(),
 			UpdatedAt:       time.Now(),

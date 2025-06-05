@@ -58,6 +58,8 @@ docker-compose.override.yml
 # Data files (keep directory but ignore contents except .gitkeep)
 data/*
 !data/.gitkeep
+backend/data/*
+!backend/data/.gitkeep
 
 # Docker volumes and data
 postgres_data/
@@ -74,3 +76,22 @@ tmp/
 *.temp
 tmp/
 temp/
+
+# フルスタックプロジェクト構造
+# バックエンド
+backend/tmp/
+backend/build-errors.log
+backend/.env
+backend/.env.local
+backend/bin/
+
+# フロントエンド
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.production.local
+frontend/.env.development.local
+frontend/.vite/
+
+# 共有リソース
+shared/tmp/

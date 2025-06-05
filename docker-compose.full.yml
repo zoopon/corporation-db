@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Go バックエンド API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      - ./backend/db:/app/db
+      - ./shared:/app/shared
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ENV=development
+      - DB_PATH=/app/db/corporation.db
+    depends_on:
+      - db-setup
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # React フロントエンド
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - ./shared:/app/shared:ro
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080
+      - VITE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # データベース初期化（既存のSQLiteを使用）
+  db-setup:
+    image: alpine:3.18
+    volumes:
+      - ./backend/db:/db
+      - ./shared/data:/data:ro
+    command: >
+      sh -c "
+        echo 'Checking database setup...'
+        if [ ! -f /db/corporation.db ]; then
+          echo 'Database not found, please run backend setup first'
+          exit 1
+        fi
+        echo 'Database setup complete'
+      "
+    networks:
+      - app-network
+
+  # Nginx リバースプロキシ（本番用）
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - app-network
+    profiles:
+      - production
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  node_modules:

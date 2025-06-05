@@ -138,6 +138,11 @@ properties:
     format: date-time
     description: Updated time
     example: "2023-12-01T09:00:00Z"
+  bases:
+    type: array
+    description: Base/branch offices of the corporation
+    items:
+      $ref: './Base.yaml'
 
 required:
   - id

@@ -19,3 +19,5 @@ components:
   schemas:
     Corporation:
       $ref: './components/schemas/Corporation.yaml'
+    Base:
+      $ref: './components/schemas/Base.yaml'

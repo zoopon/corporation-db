@@ -137,3 +137,42 @@ CREATE INDEX idx_finances_business_year ON finances(business_year);
 CREATE INDEX idx_finances_period_number ON finances(period_number);
 CREATE INDEX idx_finances_accounting_standards ON finances(accounting_standards);
 CREATE INDEX idx_finances_created_at ON finances(created_at);
+
+-- 拠点情報テーブル (Base/Branch Information)
+CREATE TABLE bases (
+    id UUID PRIMARY KEY,
+    
+    -- Foreign Keys
+    corporation_id UUID NOT NULL,                        -- corporation ID
+    corporate_number CHAR(13) NOT NULL,                  -- 法人番号
+    
+    -- Base Information
+    base_name VARCHAR(500),                              -- 拠点名称
+    country_code CHAR(2) NOT NULL,                      -- 国コード (ISO 3166-1 alpha-2)
+    postal_code VARCHAR(20),                            -- 郵便番号
+    location TEXT,                                      -- 所在地
+    phone_number VARCHAR(50),                           -- 電話番号
+    fax_number VARCHAR(50),                             -- FAX番号
+    
+    -- Data Source Information
+    data_obtained_at TIMESTAMP WITH TIME ZONE NOT NULL, -- データ取得日時
+    data_source_url VARCHAR(1000) NOT NULL,            -- データ取得元URL
+    is_head_office BOOLEAN NOT NULL DEFAULT FALSE,     -- 本店フラグ
+    
+    -- Database Metadata
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    -- Foreign Key Constraints
+    CONSTRAINT fk_bases_corporation_id FOREIGN KEY (corporation_id) REFERENCES corporations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_bases_corporate_number FOREIGN KEY (corporate_number) REFERENCES corporations(corporate_number) ON DELETE CASCADE
+);
+
+-- 拠点情報のインデックス
+CREATE INDEX idx_bases_corporation_id ON bases(corporation_id);
+CREATE INDEX idx_bases_corporate_number ON bases(corporate_number);
+CREATE INDEX idx_bases_base_name ON bases(base_name);
+CREATE INDEX idx_bases_country_code ON bases(country_code);
+CREATE INDEX idx_bases_postal_code ON bases(postal_code);
+CREATE INDEX idx_bases_is_head_office ON bases(is_head_office);
+CREATE INDEX idx_bases_created_at ON bases(created_at);

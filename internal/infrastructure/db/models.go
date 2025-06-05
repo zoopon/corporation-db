@@ -6,9 +6,27 @@ package db
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+type Basis struct {
+	ID              uuid.UUID      `json:"id"`
+	CorporationID   uuid.UUID      `json:"corporation_id"`
+	CorporateNumber string         `json:"corporate_number"`
+	BaseName        sql.NullString `json:"base_name"`
+	CountryCode     string         `json:"country_code"`
+	PostalCode      sql.NullString `json:"postal_code"`
+	Location        sql.NullString `json:"location"`
+	PhoneNumber     sql.NullString `json:"phone_number"`
+	FaxNumber       sql.NullString `json:"fax_number"`
+	DataObtainedAt  time.Time      `json:"data_obtained_at"`
+	DataSourceUrl   string         `json:"data_source_url"`
+	IsHeadOffice    bool           `json:"is_head_office"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+}
 
 type Corporation struct {
 	ID                     uuid.UUID      `json:"id"`

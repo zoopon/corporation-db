@@ -1,0 +1,81 @@
+type: object
+properties:
+  id:
+    type: string
+    format: uuid
+    description: Base UUID
+    example: "01906fb7-5e1a-7d89-b8d0-123456789abc"
+  corporation_id:
+    type: string
+    format: uuid
+    description: Corporation UUID this base belongs to
+    example: "01906fb7-5e1a-7d89-b8d0-123456789abc"
+  corporate_number:
+    type: string
+    description: 13-digit corporate number
+    pattern: '^[0-9]{13}$'
+    example: "1234567890123"
+  base_name:
+    type: string
+    nullable: true
+    description: Base/branch office name
+    example: "東京本社"
+  country_code:
+    type: string
+    description: Country code (ISO 3166-1 alpha-2)
+    pattern: '^[A-Z]{2}$'
+    example: "JP"
+  postal_code:
+    type: string
+    nullable: true
+    description: Postal code
+    example: "100-0001"
+  location:
+    type: string
+    nullable: true
+    description: Base location
+    example: "東京都千代田区千代田1-1"
+  phone_number:
+    type: string
+    nullable: true
+    description: Phone number
+    example: "03-1234-5678"
+  fax_number:
+    type: string
+    nullable: true
+    description: Fax number
+    example: "03-1234-5679"
+  data_obtained_at:
+    type: string
+    format: date-time
+    description: When the data was obtained
+    example: "2023-12-01T09:00:00Z"
+  data_source_url:
+    type: string
+    description: Source URL of the data
+    example: "https://gbiz-info.go.jp/"
+  is_head_office:
+    type: boolean
+    description: Whether this is the head office
+    example: true
+  created_at:
+    type: string
+    format: date-time
+    description: Created time
+    example: "2023-12-01T09:00:00Z"
+  updated_at:
+    type: string
+    format: date-time
+    description: Updated time
+    example: "2023-12-01T09:00:00Z"
+
+required:
+  - id
+  - corporation_id
+  - corporate_number
+  - country_code
+  - data_obtained_at
+  - data_source_url
+  - is_head_office
+  - created_at
+  - updated_at

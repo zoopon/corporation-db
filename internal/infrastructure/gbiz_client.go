@@ -467,7 +467,7 @@ func (c *GBizClient) parseCSVStream(reader io.Reader, batchProcessor func([]*dom
 	fmt.Printf("CSV Headers: %v\n", headers)
 	fmt.Printf("Number of columns: %d\n", len(headers))
 
-	const batchSize = 500 // Reduced batch size for better memory efficiency on 4GB systems
+	const batchSize = 100 // Further reduced batch size for optimal memory efficiency
 	batch := make([]*domain.CreateCorporationRequest, 0, batchSize)
 	lineNum := 1
 	totalProcessed := 0
@@ -744,7 +744,7 @@ func (c *GBizClient) parseFinanceCSVStream(reader io.Reader, batchProcessor func
 	fmt.Printf("Finance CSV Headers: %v\n", headers)
 	fmt.Printf("Number of columns: %d\n", len(headers))
 
-	const batchSize = 500 // Reduced batch size for better memory efficiency
+	const batchSize = 100 // Further reduced batch size for optimal memory efficiency
 	batch := make([]*domain.Finance, 0, batchSize)
 	lineNum := 1
 	totalProcessed := 0

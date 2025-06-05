@@ -18,9 +18,9 @@ type Router struct {
 }
 
 // NewRouter creates a new Router
-func NewRouter(corporationUsecase *usecase.CorporationUsecase) *Router {
+func NewRouter(corporationUsecase *usecase.CorporationUsecase, baseUsecase *usecase.BaseUsecase) *Router {
 	return &Router{
-		corporationHandler: NewCorporationHandler(corporationUsecase),
+		corporationHandler: NewCorporationHandler(corporationUsecase, baseUsecase),
 	}
 }
 

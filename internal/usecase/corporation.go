@@ -16,6 +16,7 @@ import (
 // CorporationUsecase handles corporation business logic
 type CorporationUsecase struct {
 	corporationRepo domain.CorporationRepository
+	baseRepo        domain.BaseRepository
 	gbizClient      *infrastructure.GBizClient
 	textConverter   *utils.TextConverter
 }
@@ -24,9 +25,15 @@ type CorporationUsecase struct {
 func NewCorporationUsecase(corporationRepo domain.CorporationRepository, gbizClient *infrastructure.GBizClient, textConverter *utils.TextConverter) *CorporationUsecase {
 	return &CorporationUsecase{
 		corporationRepo: corporationRepo,
+		baseRepo:        nil, // Will be set later via SetBaseRepo
 		gbizClient:      gbizClient,
 		textConverter:   textConverter,
 	}
+}
+
+// SetBaseRepo sets the base repository (used to avoid circular dependency)
+func (u *CorporationUsecase) SetBaseRepo(baseRepo domain.BaseRepository) {
+	u.baseRepo = baseRepo
 }
 
 // GetAll retrieves all corporations
@@ -230,6 +237,11 @@ func (u *CorporationUsecase) ImportFromZIPFileStream(ctx context.Context, zipPat
 			return fmt.Errorf("failed to upsert batch %d: %w", batchCount, err)
 		}
 
+		// Create head office records for new corporations if base repository is available
+		if u.baseRepo != nil {
+			u.createHeadOfficesForBatch(ctx, batch)
+		}
+
 		batchDuration := time.Since(batchStartTime)
 		totalProcessed += len(batch)
 
@@ -272,4 +284,59 @@ func (u *CorporationUsecase) ImportFromZIPFileStream(ctx context.Context, zipPat
 	log.Printf("Average: %.2f corporations/second", float64(processed)/duration.Seconds())
 
 	return nil
+}
+
+// createHeadOfficesForBatch creates head office records for a batch of corporations
+func (u *CorporationUsecase) createHeadOfficesForBatch(ctx context.Context, batch []*domain.CreateCorporationRequest) {
+	var headOffices []*domain.Base
+
+	for _, corpReq := range batch {
+		// Get the corporation to get its ID
+		corp, err := u.corporationRepo.GetByCorporateNumber(ctx, corpReq.CorporateNumber)
+		if err != nil {
+			log.Printf("Warning: Could not find corporation %s for head office creation: %v", corpReq.CorporateNumber, err)
+			continue
+		}
+
+		// Check if head office already exists
+		existing, err := u.baseRepo.GetHeadOfficeByCorporateNumber(ctx, corpReq.CorporateNumber)
+		if err == nil && existing != nil {
+			continue // Head office already exists
+		}
+
+		// Create head office base from corporation data
+		headOffice := domain.NewHeadOfficeBase(corp.ID, corp.CorporateNumber)
+		headOffice.CountryCode = "JP" // Default to Japan
+
+		// Build address from corporation data
+		address := ""
+		if corp.PostalCode != nil && *corp.PostalCode != "" {
+			headOffice.PostalCode = corp.PostalCode
+			address = *corp.PostalCode + " "
+		}
+		if corp.Location != nil && *corp.Location != "" {
+			address += *corp.Location
+		}
+		if address != "" {
+			headOffice.Location = &address
+		} else {
+			unknown := "住所不明" // Unknown address
+			headOffice.Location = &unknown
+		}
+
+		headOffice.DataObtainedAt = corp.CreatedAt
+		headOffice.DataSourceURL = "https://gbiz-info.go.jp/"
+
+		headOffices = append(headOffices, headOffice)
+	}
+
+	// Batch create head offices
+	if len(headOffices) > 0 {
+		err := u.baseRepo.CreateBatch(ctx, headOffices)
+		if err != nil {
+			log.Printf("Warning: Failed to create head offices batch: %v", err)
+		} else {
+			log.Printf("Created %d head office records", len(headOffices))
+		}
+	}
 }

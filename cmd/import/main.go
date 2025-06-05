@@ -89,9 +89,13 @@ func main() {
 
 	// Initialize repositories and use cases
 	corporationRepo := infrastructure.NewCorporationRepository(db)
+	baseRepo := infrastructure.NewBaseRepository(db)
 	gbizClient := infrastructure.NewGBizClient()
 	textConverter := utils.NewTextConverter()
 	corporationUsecase := usecase.NewCorporationUsecase(corporationRepo, gbizClient, textConverter)
+	
+	// Set base repository to enable head office creation during import
+	corporationUsecase.SetBaseRepo(baseRepo)
 
 	// Start import process with progress tracking
 	startTime := time.Now()

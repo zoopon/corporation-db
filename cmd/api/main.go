@@ -30,6 +30,7 @@ func main() {
 
 	// Initialize repositories
 	corporationRepo := infrastructure.NewCorporationRepository(db)
+	baseRepo := infrastructure.NewBaseRepository(db)
 
 	// Initialize gBiz client (for batch operations)
 	gbizClient := infrastructure.NewGBizClient()
@@ -39,9 +40,13 @@ func main() {
 
 	// Initialize use cases
 	corporationUsecase := usecase.NewCorporationUsecase(corporationRepo, gbizClient, textConverter)
+	baseUsecase := usecase.NewBaseUsecase(baseRepo, corporationRepo)
+
+	// Set base repository in corporation usecase to avoid circular dependency
+	corporationUsecase.SetBaseRepo(baseRepo)
 
 	// Initialize router with handlers
-	router := presentation.NewRouter(corporationUsecase)
+	router := presentation.NewRouter(corporationUsecase, baseUsecase)
 	r := router.SetupRoutes()
 
 	// Server

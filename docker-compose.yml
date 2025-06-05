@@ -15,6 +15,7 @@ services:
       - DB_NAME=corporation_db
       - PORT=8080
       - GO_ENV=development
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       # ソースコードをマウントしてホットリロードを実現
       - .:/app

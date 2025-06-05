@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	openAIAPIURL       = "https://api.openai.com/v1/chat/completions"
-	defaultModel       = "gpt-3.5-turbo"
-	defaultMaxTokens   = 2048
-	defaultTemperature = 0.3
+	openAIAPIURL       = "https://api.openai.com/v1/responses"
+	defaultModel       = "gpt-4o"
+	defaultMaxTokens   = 8192
+	defaultTemperature = 0.0
 )
 
 // OpenAIClient implements OpenAI API operations
@@ -46,94 +46,149 @@ func NewOpenAIClient() (*OpenAIClient, error) {
 
 // DiscoverURLs discovers URLs containing office information for a corporation
 func (c *OpenAIClient) DiscoverURLs(ctx context.Context, corporationName string) (*domain.URLDiscoveryResult, error) {
-	systemPrompt := `You are a helpful assistant that finds official company website URLs containing office/location information. 
-You should respond with a JSON object containing an array of URLs that are likely to contain office or branch location information for the given company.
-Only include official company website URLs, not third-party sites.
-Format your response as JSON: {"urls": ["url1", "url2", ...]}
-If no URLs are found, return {"urls": []}`
+	systemPrompt := "You are a web assistant who identifies pages on a company's official website that list its offices or facilities, including HQ, plants, sales offices, branches, warehouses, service centers, etc."
 
-	userPrompt := fmt.Sprintf(`Find official website URLs for the company "%s" that contain information about their offices, branches, or locations. 
-Look for pages like:
-- Office locations page
-- About us / Company info page with office details
-- Contact page with multiple office addresses
-- Branch/store locator pages
+	userPrompt := fmt.Sprintf(`法人番号を持つ会社名「%s」から、公式Webサイト内の拠点情報ページのURLと、探索過程で収集したすべての公式URLをJSON形式で返してください。拠点情報には、本社、生産拠点、工場、営業所、支社、支店、倉庫、サービスセンター（保守拠点なども含む）などを含みます。`, corporationName)
 
-Company name: %s`, corporationName, corporationName)
-
-	response, err := c.chatCompletion(ctx, systemPrompt, userPrompt)
+	response, err := c.advancedChatCompletion(ctx, systemPrompt, userPrompt, "urls_including_locations", getURLDiscoverySchema())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get URL discovery response: %w", err)
 	}
 
 	// Parse the response
-	var result domain.URLDiscoveryResult
-	if err := json.Unmarshal([]byte(response), &result); err != nil {
+	var rawResult struct {
+		URLs          []string `json:"urls"`
+		CandidateURLs []string `json:"candidate_urls"`
+	}
+
+	if err := json.Unmarshal([]byte(response), &rawResult); err != nil {
 		// If JSON parsing fails, try to extract URLs manually
 		urls := c.extractURLsFromText(response)
-		result = domain.URLDiscoveryResult{URLs: urls}
+		return &domain.URLDiscoveryResult{URLs: urls}, nil
 	}
 
-	return &result, nil
+	result := &domain.URLDiscoveryResult{
+		URLs:          rawResult.URLs,
+		CandidateURLs: rawResult.CandidateURLs,
+	}
+
+	return result, nil
 }
 
-// ExtractBasesFromURL extracts base information from a given URL
-func (c *OpenAIClient) ExtractBasesFromURL(ctx context.Context, url string) (*domain.BaseExtractionResult, error) {
-	// First, fetch the content of the URL
-	content, err := c.fetchURLContent(ctx, url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch URL content: %w", err)
-	}
+// ExtractBasesFromURL extracts base information from given URLs
+func (c *OpenAIClient) ExtractBasesFromURL(ctx context.Context, urls []string, corporationName string) (*domain.BaseExtractionResult, error) {
+	systemPrompt := "あなたは与えられた会社情報とWebページから拠点情報（本社、生産拠点、製造拠点、営業所、事業所、支社、工場、サービスセンターなど）を取得する作業者です"
 
-	systemPrompt := `You are a helpful assistant that extracts office/branch location information from website content.
-Extract all office and branch locations from the provided text and return them as a JSON object.
-For each location, determine if it's a head office or branch office based on context.
-Format your response as JSON: {"bases": [{"name": "Office Name", "type": "head_office" or "branch_office", "postal_code": "123-4567", "prefecture": "Prefecture", "city": "City", "address": "Full Address", "phone_number": "Phone", "fax_number": "Fax"}]}
-If no locations are found, return {"bases": []}`
+	// Create URLs list string
+	urlsList := strings.Join(urls, "\n")
 
-	userPrompt := fmt.Sprintf(`Extract all office and branch location information from this website content.
-Look for:
-- Office names
-- Addresses (postal codes, prefectures, cities, street addresses)
-- Contact information (phone, fax)
-- Determine if each location is a head office or branch office
+	userPrompt := fmt.Sprintf(`次のURLsから『%s』の拠点情報（本社、生産拠点、製造拠点、営業所、事業所、支社、工場、サービスセンターなど）を取得してjson形式で返してください。
+国内の全ての拠点を漏れなく取得してください。ただし、関連会社等、当該会社以外の情報は含めないでください。
 
-Website URL: %s
-Content: %s`, url, content)
+URLs:
+%s`, corporationName, urlsList)
 
-	response, err := c.chatCompletion(ctx, systemPrompt, userPrompt)
+	response, err := c.advancedChatCompletion(ctx, systemPrompt, userPrompt, "location_information", getLocationExtractionSchema())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get base extraction response: %w", err)
 	}
 
 	// Parse the response
-	var result domain.BaseExtractionResult
-	if err := json.Unmarshal([]byte(response), &result); err != nil {
+	var rawResult struct {
+		Locations []struct {
+			URL         string `json:"url"`
+			Name        string `json:"name"`
+			Zipcode     string `json:"zipcode"`
+			Address     string `json:"address"`
+			PhoneNumber string `json:"phone_number"`
+		} `json:"locations"`
+	}
+
+	if err := json.Unmarshal([]byte(response), &rawResult); err != nil {
 		return &domain.BaseExtractionResult{Bases: []domain.ExtractedBase{}}, nil
 	}
 
-	return &result, nil
-}
+	// Convert to domain format
+	var bases []domain.ExtractedBase
+	for _, location := range rawResult.Locations {
+		// Clean name by removing numbers at start/end
+		cleanName := strings.TrimSpace(location.Name)
+		if len(cleanName) > 2 {
+			// Remove leading/trailing 2-digit numbers
+			if len(cleanName) >= 2 && cleanName[0] >= '0' && cleanName[0] <= '9' && cleanName[1] >= '0' && cleanName[1] <= '9' {
+				cleanName = cleanName[2:]
+			}
+			if len(cleanName) >= 2 && cleanName[len(cleanName)-2] >= '0' && cleanName[len(cleanName)-2] <= '9' && cleanName[len(cleanName)-1] >= '0' && cleanName[len(cleanName)-1] <= '9' {
+				cleanName = cleanName[:len(cleanName)-2]
+			}
+			cleanName = strings.TrimSpace(cleanName)
+		}
 
-// chatCompletion makes a chat completion request to OpenAI API
-func (c *OpenAIClient) chatCompletion(ctx context.Context, systemPrompt, userPrompt string) (string, error) {
-	req := domain.OpenAIRequest{
-		Model: c.model,
-		Messages: []domain.OpenAIMessage{
-			{
-				Role:    "system",
-				Content: systemPrompt,
-			},
-			{
-				Role:    "user",
-				Content: userPrompt,
-			},
-		},
-		MaxTokens:   defaultMaxTokens,
-		Temperature: defaultTemperature,
+		// Determine office type based on name
+		officeType := "branch_office"
+		if strings.Contains(cleanName, "本社") || strings.Contains(cleanName, "本店") || strings.Contains(cleanName, "Head") {
+			officeType = "head_office"
+		}
+
+		base := domain.ExtractedBase{
+			Name:        cleanName,
+			Type:        officeType,
+			PostalCode:  location.Zipcode,
+			Prefecture:  "", // Will be extracted from address
+			City:        "", // Will be extracted from address
+			Address:     location.Address,
+			PhoneNumber: location.PhoneNumber,
+			FaxNumber:   "", // Not provided in this format
+		}
+
+		// Try to parse prefecture and city from address
+		if location.Address != "" {
+			parts := strings.Split(location.Address, " ")
+			if len(parts) >= 2 {
+				base.Prefecture = parts[0]
+				base.City = parts[1]
+			}
+		}
+
+		bases = append(bases, base)
 	}
 
-	reqBody, err := json.Marshal(req)
+	return &domain.BaseExtractionResult{Bases: bases}, nil
+}
+
+// advancedChatCompletion makes a request to OpenAI API with tools and structured output
+func (c *OpenAIClient) advancedChatCompletion(ctx context.Context, systemPrompt, userPrompt, schemaName string, schema map[string]interface{}) (string, error) {
+	requestBody := map[string]interface{}{
+		"model": c.model,
+		"tools": []map[string]interface{}{
+			{
+				"type":                "web_search_preview",
+				"search_context_size": "high",
+			},
+		},
+		"input": []map[string]interface{}{
+			{
+				"role":    "system",
+				"content": systemPrompt,
+			},
+			{
+				"role":    "user",
+				"content": userPrompt,
+			},
+		},
+		"temperature":       defaultTemperature,
+		"max_output_tokens": defaultMaxTokens,
+		"text": map[string]interface{}{
+			"format": map[string]interface{}{
+				"type":   "json_schema",
+				"name":   schemaName,
+				"strict": true,
+				"schema": schema,
+			},
+		},
+	}
+
+	reqBody, err := json.Marshal(requestBody)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
@@ -158,56 +213,112 @@ func (c *OpenAIClient) chatCompletion(ctx context.Context, systemPrompt, userPro
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		var errorResp domain.OpenAIErrorResponse
-		if err := json.Unmarshal(body, &errorResp); err == nil {
-			return "", fmt.Errorf("OpenAI API error: %s", errorResp.Error.Message)
-		}
 		return "", fmt.Errorf("OpenAI API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var openAIResp domain.OpenAIResponse
-	if err := json.Unmarshal(body, &openAIResp); err != nil {
+	// Parse advanced API response format
+	var response struct {
+		Output []struct {
+			Type    string `json:"type"`
+			Content []struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"content"`
+		} `json:"output"`
+	}
+
+	if err := json.Unmarshal(body, &response); err != nil {
 		return "", fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	if len(openAIResp.Choices) == 0 {
-		return "", fmt.Errorf("no choices in response")
+	// Extract the text content
+	for _, output := range response.Output {
+		if output.Type == "message" {
+			for _, content := range output.Content {
+				if content.Type == "output_text" {
+					// Clean up control characters but keep \n and \t
+					cleaned := strings.Map(func(r rune) rune {
+						if r >= 0 && r <= 31 && r != '\n' && r != '\t' {
+							return -1
+						}
+						return r
+					}, content.Text)
+					return cleaned, nil
+				}
+			}
+		}
 	}
 
-	return openAIResp.Choices[0].Message.Content, nil
+	return "", fmt.Errorf("no valid content found in response")
 }
 
-// fetchURLContent fetches the content of a URL (simplified implementation)
-func (c *OpenAIClient) fetchURLContent(ctx context.Context, url string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+// getURLDiscoverySchema returns the JSON schema for URL discovery
+func getURLDiscoverySchema() map[string]interface{} {
+	return map[string]interface{}{
+		"type":     "object",
+		"required": []string{"urls", "candidate_urls"},
+		"properties": map[string]interface{}{
+			"urls": map[string]interface{}{
+				"type": "array",
+				"items": map[string]interface{}{
+					"type":        "string",
+					"description": "拠点情報が記載されているページと判断したページのURL",
+				},
+				"description": "拠点情報が記載されているページと判断したページのURLの一覧",
+			},
+			"candidate_urls": map[string]interface{}{
+				"type": "array",
+				"items": map[string]interface{}{
+					"type":        "string",
+					"description": "探索で取得したURL",
+				},
+				"description": "探索で取得した全てのURLの一覧",
+			},
+		},
+		"additionalProperties": false,
 	}
+}
 
-	req.Header.Set("User-Agent", "Corporation DB Bot/1.0")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch URL: %w", err)
+// getLocationExtractionSchema returns the JSON schema for location extraction
+func getLocationExtractionSchema() map[string]interface{} {
+	return map[string]interface{}{
+		"type":     "object",
+		"required": []string{"locations"},
+		"properties": map[string]interface{}{
+			"locations": map[string]interface{}{
+				"type": "array",
+				"items": map[string]interface{}{
+					"type":     "object",
+					"required": []string{"url", "name", "zipcode", "address", "phone_number"},
+					"properties": map[string]interface{}{
+						"url": map[string]interface{}{
+							"type":        "string",
+							"description": "拠点情報を取得したWebページのパスを含むURL",
+						},
+						"name": map[string]interface{}{
+							"type":        "string",
+							"description": "拠点の名前",
+						},
+						"zipcode": map[string]interface{}{
+							"type":        "string",
+							"description": "拠点の郵便番号",
+						},
+						"address": map[string]interface{}{
+							"type":        "string",
+							"description": "郵便番号を含まない拠点の住所",
+						},
+						"phone_number": map[string]interface{}{
+							"type":        "string",
+							"description": "拠点の電話番号",
+						},
+					},
+					"additionalProperties": false,
+				},
+				"description": "An array of base information objects.",
+			},
+		},
+		"additionalProperties": false,
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to fetch URL, status: %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	// Limit content size to avoid token limits
-	content := string(body)
-	if len(content) > 8000 {
-		content = content[:8000] + "..."
-	}
-
-	return content, nil
 }
 
 // extractURLsFromText extracts URLs from text response when JSON parsing fails

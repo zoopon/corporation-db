@@ -63,21 +63,14 @@ func (uc *FetchBasesUseCase) Execute(ctx context.Context, corporateNumber string
 
 	log.Printf("Found %d URLs: %v", len(urlResult.URLs), urlResult.URLs)
 
-	var allExtractedBases []domain.ExtractedBase
-
-	// Extract base information from each URL
-	for _, url := range urlResult.URLs {
-		log.Printf("Extracting bases from URL: %s", url)
-		baseResult, err := uc.openAIService.ExtractBasesFromURL(ctx, url)
-		if err != nil {
-			log.Printf("Failed to extract bases from URL %s: %v", url, err)
-			continue
-		}
-
-		allExtractedBases = append(allExtractedBases, baseResult.Bases...)
+	// Extract base information from all URLs at once
+	log.Printf("Extracting bases from %d URLs", len(urlResult.URLs))
+	baseResult, err := uc.openAIService.ExtractBasesFromURL(ctx, urlResult.URLs, corporation.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract bases from URLs: %w", err)
 	}
 
-	if len(allExtractedBases) == 0 {
+	if len(baseResult.Bases) == 0 {
 		return &FetchBasesResult{
 			Message:    "No base information could be extracted from the found URLs",
 			BasesCount: 0,
@@ -85,11 +78,11 @@ func (uc *FetchBasesUseCase) Execute(ctx context.Context, corporateNumber string
 		}, nil
 	}
 
-	log.Printf("Extracted %d bases", len(allExtractedBases))
+	log.Printf("Extracted %d bases", len(baseResult.Bases))
 
 	// Convert extracted bases to domain entities and save to database
 	savedCount := 0
-	for _, extractedBase := range allExtractedBases {
+	for _, extractedBase := range baseResult.Bases {
 		// Create location string from prefecture, city, and address
 		var location *string
 		if extractedBase.Prefecture != "" || extractedBase.City != "" || extractedBase.Address != "" {
@@ -166,8 +159,8 @@ func (uc *FetchBasesUseCase) Execute(ctx context.Context, corporateNumber string
 	}
 
 	message := fmt.Sprintf("Successfully fetched and saved %d base/branch offices", savedCount)
-	if savedCount != len(allExtractedBases) {
-		message += fmt.Sprintf(" (%d duplicates skipped)", len(allExtractedBases)-savedCount)
+	if savedCount != len(baseResult.Bases) {
+		message += fmt.Sprintf(" (%d duplicates skipped)", len(baseResult.Bases)-savedCount)
 	}
 
 	return &FetchBasesResult{

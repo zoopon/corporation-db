@@ -55,7 +55,8 @@ type OpenAIError struct {
 
 // URLDiscoveryResult represents the result of URL discovery
 type URLDiscoveryResult struct {
-	URLs []string `json:"urls"`
+	URLs          []string `json:"urls"`
+	CandidateURLs []string `json:"candidate_urls,omitempty"`
 }
 
 // BaseExtractionResult represents the result of base information extraction
@@ -82,6 +83,6 @@ type OpenAIService interface {
 	// DiscoverURLs discovers URLs containing office information for a corporation
 	DiscoverURLs(ctx context.Context, corporationName string) (*URLDiscoveryResult, error)
 
-	// ExtractBasesFromURL extracts base information from a given URL
-	ExtractBasesFromURL(ctx context.Context, url string) (*BaseExtractionResult, error)
+	// ExtractBasesFromURL extracts base information from given URLs
+	ExtractBasesFromURL(ctx context.Context, urls []string, corporationName string) (*BaseExtractionResult, error)
 }

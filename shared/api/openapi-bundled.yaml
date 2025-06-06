@@ -447,7 +447,7 @@ components:
         data_source_url:
           type: string
           description: Source URL of the data
-          example: https://gbiz-info.go.jp/
+          example: https://info.gbiz.go.jp/
         is_head_office:
           type: boolean
           description: Whether this is the head office

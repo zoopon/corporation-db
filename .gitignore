@@ -95,3 +95,4 @@ frontend/.vite/
 
 # 共有リソース
 shared/tmp/
+node_modules

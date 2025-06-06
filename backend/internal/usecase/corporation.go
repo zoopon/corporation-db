@@ -325,7 +325,7 @@ func (u *CorporationUsecase) createHeadOfficesForBatch(ctx context.Context, batc
 		}
 
 		headOffice.DataObtainedAt = corp.CreatedAt
-		headOffice.DataSourceURL = "https://gbiz-info.go.jp/"
+		headOffice.DataSourceURL = "https://info.gbiz.go.jp/"
 
 		headOffices = append(headOffices, headOffice)
 	}

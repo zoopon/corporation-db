@@ -412,7 +412,7 @@ export interface components {
             data_obtained_at: string;
             /**
              * @description Source URL of the data
-             * @example https://gbiz-info.go.jp/
+             * @example https://info.gbiz.go.jp/
              */
             data_source_url: string;
             /**

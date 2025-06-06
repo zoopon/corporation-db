@@ -193,7 +193,7 @@ func (u *BaseUsecase) CreateHeadOfficeFromCorporation(ctx context.Context, corp 
 	headOffice.Location = &address
 
 	headOffice.DataObtainedAt = corp.CreatedAt
-	headOffice.DataSourceURL = "https://gbiz-info.go.jp/"
+	headOffice.DataSourceURL = "https://info.gbiz.go.jp/"
 
 	return u.baseRepo.Create(ctx, headOffice)
 }

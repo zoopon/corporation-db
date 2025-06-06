@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   MagnifyingGlassIcon,
   BuildingOfficeIcon,
@@ -12,14 +12,34 @@ import {
   CreditCardIcon
 } from '@heroicons/react/24/outline';
 import { useCorporations, useRefreshBases, useCorporation } from '../services/corporationService';
+import { useDebounce } from '../hooks/useDebounce';
 
 const CorporationDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCorporateNumber, setSelectedCorporateNumber] = useState<string>('');
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   
-  // 企業一覧取得
-  const { data: corporations, isLoading: corporationsLoading, error: corporationsError } = useCorporations();
+  // 検索キーワードをデバウンス（500ms遅延）
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+  
+  // 検索パラメータを作成
+  const searchParams = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) {
+      return undefined;
+    }
+    
+    // 法人番号の形式かどうかをチェック（13桁の数字）
+    const isCorporateNumber = /^\d{13}$/.test(debouncedSearchTerm.replace(/\D/g, ''));
+    
+    if (isCorporateNumber) {
+      return { corporateNumber: debouncedSearchTerm.replace(/\D/g, '') };
+    } else {
+      return { name: debouncedSearchTerm };
+    }
+  }, [debouncedSearchTerm]);
+  
+  // 企業一覧取得（検索パラメータ付き）
+  const { data: corporations, isLoading: corporationsLoading, error: corporationsError } = useCorporations(searchParams);
   
   // 選択された企業の詳細情報を取得
   const { data: selectedCorporation, isLoading: corporationDetailsLoading } = useCorporation(selectedCorporateNumber);
@@ -31,11 +51,8 @@ const CorporationDashboard: React.FC = () => {
   // 拠点情報再取得ミューテーション
   const refreshBasesMutation = useRefreshBases();
 
-  // 検索でフィルタリングされた企業リスト
-  const filteredCorporations = corporations?.corporations?.filter(corp =>
-    corp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    corp.corporate_number.includes(searchTerm)
-  ) || [];
+  // 企業リスト（APIから直接取得、フィルタリング不要）
+  const corporationsList = corporations?.corporations || [];
 
   const handleCorporationSelect = (corporateNumber: string) => {
     setSelectedCorporateNumber(corporateNumber);
@@ -92,7 +109,21 @@ const CorporationDashboard: React.FC = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               />
+              {/* 検索中インジケーター */}
+              {searchTerm !== debouncedSearchTerm && (
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                </div>
+              )}
             </div>
+            
+            {/* 検索結果の情報 */}
+            {searchParams && (
+              <div className="mt-2 text-sm text-gray-600">
+                {searchParams.name && `企業名: "${searchParams.name}" で検索中`}
+                {searchParams.corporateNumber && `法人番号: "${searchParams.corporateNumber}" で検索中`}
+              </div>
+            )}
           </div>
 
           <div className="max-h-96 overflow-y-auto">
@@ -106,8 +137,16 @@ const CorporationDashboard: React.FC = () => {
                 <p>エラーが発生しました: {corporationsError.message}</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-200">
-                {filteredCorporations.map((corp) => (
+              <>
+                {/* 検索結果件数 */}
+                {searchParams && (
+                  <div className="px-4 py-2 bg-gray-50 border-b text-sm text-gray-600">
+                    検索結果: {corporationsList.length}件
+                  </div>
+                )}
+                
+                <div className="divide-y divide-gray-200">
+                  {corporationsList.map((corp) => (
                   <div
                     key={corp.id}
                     onClick={() => handleCorporationSelect(corp.corporate_number)}
@@ -136,12 +175,13 @@ const CorporationDashboard: React.FC = () => {
                   </div>
                 ))}
                 
-                {filteredCorporations.length === 0 && !corporationsLoading && (
+                {corporationsList.length === 0 && !corporationsLoading && (
                   <div className="p-6 text-center text-gray-500">
                     <p>該当する企業が見つかりませんでした</p>
                   </div>
                 )}
-              </div>
+                </div>
+              </>
             )}
           </div>
         </div>

@@ -4,18 +4,27 @@ import {
   BuildingOfficeIcon,
   MapPinIcon,
   PhoneIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  XMarkIcon,
+  CalendarIcon,
+  CurrencyYenIcon,
+  UsersIcon,
+  CreditCardIcon
 } from '@heroicons/react/24/outline';
-import { useCorporations, useRefreshBases } from '../services/corporationService';
+import { useCorporations, useRefreshBases, useCorporation } from '../services/corporationService';
 
 const CorporationDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCorporateNumber, setSelectedCorporateNumber] = useState<string>('');
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
   
   // 企業一覧取得
   const { data: corporations, isLoading: corporationsLoading, error: corporationsError } = useCorporations();
   
-  // 選択された企業の詳細情報を取得（拠点情報も含む）
+  // 選択された企業の詳細情報を取得
+  const { data: selectedCorporation, isLoading: corporationDetailsLoading } = useCorporation(selectedCorporateNumber);
+  
+  // 選択された企業の拠点情報（企業一覧の情報から取得）
   const selectedCorp = corporations?.corporations?.find(corp => corp.corporate_number === selectedCorporateNumber);
   const bases = selectedCorp?.bases || [];
   
@@ -30,6 +39,7 @@ const CorporationDashboard: React.FC = () => {
 
   const handleCorporationSelect = (corporateNumber: string) => {
     setSelectedCorporateNumber(corporateNumber);
+    setShowDetailPanel(true);
   };
 
   const handleRefreshBases = () => {
@@ -38,8 +48,27 @@ const CorporationDashboard: React.FC = () => {
     }
   };
 
+  const closeDetailPanel = () => {
+    setShowDetailPanel(false);
+    setSelectedCorporateNumber('');
+  };
+
+  const formatCurrency = (value: number | undefined | null) => {
+    if (!value) return '未設定';
+    return new Intl.NumberFormat('ja-JP', {
+      style: 'currency',
+      currency: 'JPY',
+      minimumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return '未設定';
+    return new Date(dateString).toLocaleDateString('ja-JP');
+  };
+
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto relative">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">企業情報ダッシュボード</h1>
         <p className="text-gray-600">企業情報と拠点データの閲覧・管理</p>
@@ -82,8 +111,10 @@ const CorporationDashboard: React.FC = () => {
                   <div
                     key={corp.id}
                     onClick={() => handleCorporationSelect(corp.corporate_number)}
-                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      selectedCorporateNumber === corp.corporate_number ? 'bg-blue-50 border-r-2 border-blue-500' : ''
+                    className={`p-4 cursor-pointer hover:bg-blue-50 hover:border-l-2 hover:border-blue-300 transition-all duration-200 ${
+                      selectedCorporateNumber === corp.corporate_number 
+                        ? 'bg-blue-50 border-l-2 border-blue-500 shadow-sm' 
+                        : 'hover:shadow-sm'
                     }`}
                   >
                     <div className="flex items-start">
@@ -193,6 +224,241 @@ const CorporationDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 右側スライドアウトパネル: 企業詳細 */}
+      <div className={`fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${
+        showDetailPanel ? 'translate-x-0' : 'translate-x-full'
+      }`}>
+        <div className="flex flex-col h-full">
+          {/* ヘッダー */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">企業詳細</h2>
+            <button
+              onClick={closeDetailPanel}
+              className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* コンテンツ */}
+          <div className="flex-1 overflow-y-auto">
+            {corporationDetailsLoading ? (
+              <div className="p-6 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-gray-500">詳細情報を読み込み中...</p>
+              </div>
+            ) : selectedCorporation ? (
+              <div className="p-6 space-y-6">
+                {/* 基本情報 */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">基本情報</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="block text-xs text-gray-500">企業名</span>
+                      <span className="text-sm text-gray-900">{selectedCorporation.name}</span>
+                    </div>
+                    <div>
+                      <span className="block text-xs text-gray-500">法人番号</span>
+                      <span className="text-sm text-gray-900">{selectedCorporation.corporate_number}</span>
+                    </div>
+                    {selectedCorporation.kana && (
+                      <div>
+                        <span className="block text-xs text-gray-500">フリガナ</span>
+                        <span className="text-sm text-gray-900">{selectedCorporation.kana}</span>
+                      </div>
+                    )}
+                    {selectedCorporation.name_en && (
+                      <div>
+                        <span className="block text-xs text-gray-500">英語名</span>
+                        <span className="text-sm text-gray-900">{selectedCorporation.name_en}</span>
+                      </div>
+                    )}
+                    {selectedCorporation.location && (
+                      <div>
+                        <span className="block text-xs text-gray-500">所在地</span>
+                        <span className="text-sm text-gray-900">{selectedCorporation.location}</span>
+                      </div>
+                    )}
+                    {selectedCorporation.postal_code && (
+                      <div>
+                        <span className="block text-xs text-gray-500">郵便番号</span>
+                        <span className="text-sm text-gray-900">{selectedCorporation.postal_code}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="block text-xs text-gray-500">法人状態</span>
+                      <span className="text-sm text-gray-900">{selectedCorporation.status}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 代表者情報 */}
+                {(selectedCorporation.representative_name || selectedCorporation.representative_position) && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">代表者情報</h3>
+                    <div className="space-y-3">
+                      {selectedCorporation.representative_name && (
+                        <div>
+                          <span className="block text-xs text-gray-500">代表者名</span>
+                          <span className="text-sm text-gray-900">{selectedCorporation.representative_name}</span>
+                        </div>
+                      )}
+                      {selectedCorporation.representative_position && (
+                        <div>
+                          <span className="block text-xs text-gray-500">役職</span>
+                          <span className="text-sm text-gray-900">{selectedCorporation.representative_position}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 企業詳細 */}
+                {(selectedCorporation.date_of_establishment || selectedCorporation.founding_year || selectedCorporation.capital_stock || selectedCorporation.employee_number) && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">企業詳細</h3>
+                    <div className="space-y-3">
+                      {selectedCorporation.date_of_establishment && (
+                        <div className="flex items-center">
+                          <CalendarIcon className="h-4 w-4 text-gray-400 mr-2" />
+                          <div>
+                            <span className="block text-xs text-gray-500">設立年月日</span>
+                            <span className="text-sm text-gray-900">{formatDate(selectedCorporation.date_of_establishment)}</span>
+                          </div>
+                        </div>
+                      )}
+                      {selectedCorporation.founding_year && (
+                        <div className="flex items-center">
+                          <CalendarIcon className="h-4 w-4 text-gray-400 mr-2" />
+                          <div>
+                            <span className="block text-xs text-gray-500">創業年</span>
+                            <span className="text-sm text-gray-900">{selectedCorporation.founding_year}年</span>
+                          </div>
+                        </div>
+                      )}
+                      {selectedCorporation.capital_stock && (
+                        <div className="flex items-center">
+                          <CurrencyYenIcon className="h-4 w-4 text-gray-400 mr-2" />
+                          <div>
+                            <span className="block text-xs text-gray-500">資本金</span>
+                            <span className="text-sm text-gray-900">{formatCurrency(selectedCorporation.capital_stock)}</span>
+                          </div>
+                        </div>
+                      )}
+                      {selectedCorporation.employee_number && (
+                        <div className="flex items-center">
+                          <UsersIcon className="h-4 w-4 text-gray-400 mr-2" />
+                          <div>
+                            <span className="block text-xs text-gray-500">従業員数</span>
+                            <span className="text-sm text-gray-900">{selectedCorporation.employee_number}人</span>
+                          </div>
+                        </div>
+                      )}
+                      {(selectedCorporation.company_size_male || selectedCorporation.company_size_female) && (
+                        <div className="flex items-center">
+                          <UsersIcon className="h-4 w-4 text-gray-400 mr-2" />
+                          <div>
+                            <span className="block text-xs text-gray-500">男女別従業員数</span>
+                            <span className="text-sm text-gray-900">
+                              男性: {selectedCorporation.company_size_male || 0}人 / 女性: {selectedCorporation.company_size_female || 0}人
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 事業情報 */}
+                {(selectedCorporation.business_items || selectedCorporation.business_summary) && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">事業情報</h3>
+                    <div className="space-y-3">
+                      {selectedCorporation.business_items && (
+                        <div>
+                          <span className="block text-xs text-gray-500">事業内容</span>
+                          <span className="text-sm text-gray-900">{selectedCorporation.business_items}</span>
+                        </div>
+                      )}
+                      {selectedCorporation.business_summary && (
+                        <div>
+                          <span className="block text-xs text-gray-500">事業概要</span>
+                          <span className="text-sm text-gray-900">{selectedCorporation.business_summary}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 連絡先情報 */}
+                {(selectedCorporation.company_url || selectedCorporation.qualification_grade) && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">その他情報</h3>
+                    <div className="space-y-3">
+                      {selectedCorporation.company_url && (
+                        <div className="flex items-center">
+                          <GlobeAltIcon className="h-4 w-4 text-gray-400 mr-2" />
+                          <div>
+                            <span className="block text-xs text-gray-500">ウェブサイト</span>
+                            <a 
+                              href={selectedCorporation.company_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:text-blue-800 underline"
+                            >
+                              {selectedCorporation.company_url}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                      {selectedCorporation.qualification_grade && (
+                        <div className="flex items-center">
+                          <CreditCardIcon className="h-4 w-4 text-gray-400 mr-2" />
+                          <div>
+                            <span className="block text-xs text-gray-500">資格等級</span>
+                            <span className="text-sm text-gray-900">{selectedCorporation.qualification_grade}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* メタデータ */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">データ情報</h3>
+                  <div className="space-y-3">
+                    {selectedCorporation.update_date && (
+                      <div>
+                        <span className="block text-xs text-gray-500">最終更新日</span>
+                        <span className="text-sm text-gray-900">{formatDate(selectedCorporation.update_date)}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="block text-xs text-gray-500">登録日</span>
+                      <span className="text-sm text-gray-900">{formatDate(selectedCorporation.created_at)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 text-center text-gray-500">
+                <BuildingOfficeIcon className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                <p>企業詳細が見つかりませんでした</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* オーバーレイ */}
+      {showDetailPanel && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={closeDetailPanel}
+        />
+      )}
     </div>
   );
 };

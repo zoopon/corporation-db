@@ -181,16 +181,13 @@ func (u *BaseUsecase) CreateHeadOfficeFromCorporation(ctx context.Context, corp 
 	headOffice := domain.NewHeadOfficeBase(corp.ID, corp.CorporateNumber)
 	headOffice.CountryCode = "JP" // Default to Japan for now
 
-	// Build address from postal code and location
-	address := ""
+	// Set postal code and location separately
 	if corp.PostalCode != nil && *corp.PostalCode != "" {
-		address = *corp.PostalCode + " "
 		headOffice.PostalCode = corp.PostalCode
 	}
 	if corp.Location != nil {
-		address += *corp.Location
+		headOffice.Location = corp.Location
 	}
-	headOffice.Location = &address
 
 	headOffice.DataObtainedAt = corp.CreatedAt
 	headOffice.DataSourceURL = "https://info.gbiz.go.jp/"

@@ -308,17 +308,12 @@ func (u *CorporationUsecase) createHeadOfficesForBatch(ctx context.Context, batc
 		headOffice := domain.NewHeadOfficeBase(corp.ID, corp.CorporateNumber)
 		headOffice.CountryCode = "JP" // Default to Japan
 
-		// Build address from corporation data
-		address := ""
+		// Set postal code and location separately
 		if corp.PostalCode != nil && *corp.PostalCode != "" {
 			headOffice.PostalCode = corp.PostalCode
-			address = *corp.PostalCode + " "
 		}
 		if corp.Location != nil && *corp.Location != "" {
-			address += *corp.Location
-		}
-		if address != "" {
-			headOffice.Location = &address
+			headOffice.Location = corp.Location
 		} else {
 			unknown := "住所不明" // Unknown address
 			headOffice.Location = &unknown

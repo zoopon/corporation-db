@@ -1,26 +1,53 @@
-version: '3.8'
-
 services:
+  # PostgreSQLデータベース
+  db:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=corporation_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+    restart: unless-stopped
+
   # Go バックエンド API
   backend:
     build:
       context: ./backend
       dockerfile: docker/Dockerfile.dev
+      target: dev
     ports:
       - "8080:8080"
     volumes:
       - ./backend:/app
-      - ./backend/db:/app/db
-      - ./shared:/app/shared
+      - /app/bin
+      - /app/tmp
     environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=corporation_db
+      - PORT=8080
+      - GO_ENV=development
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ENV=development
-      - DB_PATH=/app/db/corporation.db
     depends_on:
-      - db-setup
+      db:
+        condition: service_healthy
     networks:
       - app-network
     restart: unless-stopped
+    working_dir: /app
+    command: ["air", "-c", ".air.toml"]
 
   # React フロントエンド
   frontend:
@@ -34,7 +61,7 @@ services:
       - ./shared:/app/shared:ro
       - /app/node_modules
     environment:
-      - VITE_API_BASE_URL=http://localhost:8080
+      - VITE_API_BASE_URL=http://localhost
       - VITE_ENV=development
     depends_on:
       - backend
@@ -42,25 +69,7 @@ services:
       - app-network
     restart: unless-stopped
 
-  # データベース初期化（既存のSQLiteを使用）
-  db-setup:
-    image: alpine:3.18
-    volumes:
-      - ./backend/db:/db
-      - ./shared/data:/data:ro
-    command: >
-      sh -c "
-        echo 'Checking database setup...'
-        if [ ! -f /db/corporation.db ]; then
-          echo 'Database not found, please run backend setup first'
-          exit 1
-        fi
-        echo 'Database setup complete'
-      "
-    networks:
-      - app-network
-
-  # Nginx リバースプロキシ（本番用）
+  # Nginx リバースプロキシ
   nginx:
     image: nginx:alpine
     ports:
@@ -72,12 +81,11 @@ services:
       - frontend
     networks:
       - app-network
-    profiles:
-      - production
+    restart: unless-stopped
 
 networks:
   app-network:
     driver: bridge
 
 volumes:
-  node_modules:
+  postgres_data:

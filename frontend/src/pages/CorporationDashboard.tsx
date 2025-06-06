@@ -91,9 +91,8 @@ const CorporationDashboard: React.FC = () => {
         <p className="text-gray-600">企業情報と拠点データの閲覧・管理</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* 左パネル: 企業一覧 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* 企業一覧 (フルワイド) */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">企業一覧</h2>
             
@@ -185,85 +184,6 @@ const CorporationDashboard: React.FC = () => {
             )}
           </div>
         </div>
-
-        {/* 右パネル: 拠点情報 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">拠点情報</h2>
-              {selectedCorporateNumber && (
-                <button
-                  onClick={handleRefreshBases}
-                  disabled={refreshBasesMutation.isPending || corporationsLoading}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {refreshBasesMutation.isPending || corporationsLoading ? '取得中...' : '拠点情報を取得'}
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="max-h-96 overflow-y-auto">
-            {!selectedCorporateNumber ? (
-              <div className="p-6 text-center text-gray-500">
-                <BuildingOfficeIcon className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                <p>企業を選択してください</p>
-              </div>
-            ) : refreshBasesMutation.isPending ? (
-              <div className="p-6 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-gray-500">拠点情報を取得中...</p>
-              </div>
-            ) : bases && bases.length > 0 ? (
-              <div className="divide-y divide-gray-200">
-                {bases.map((base) => (
-                  <div key={base.id} className="p-4">
-                    <div className="flex items-start">
-                      <MapPinIcon className="h-5 w-5 text-gray-400 mt-1 mr-3 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium text-gray-900">
-                          {base.base_name || '拠点'}
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {base.location}
-                        </p>
-                        
-                        <div className="mt-2 space-y-1">
-                          {base.phone_number && (
-                            <div className="flex items-center text-xs text-gray-500">
-                              <PhoneIcon className="h-4 w-4 mr-2" />
-                              {base.phone_number}
-                            </div>
-                          )}
-                          {base.data_source_url && (
-                            <div className="flex items-center text-xs text-gray-500">
-                              <GlobeAltIcon className="h-4 w-4 mr-2" />
-                              <a 
-                                href={base.data_source_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 truncate"
-                              >
-                                情報源
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-6 text-center text-gray-500">
-                <MapPinIcon className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                <p>拠点情報が見つかりませんでした</p>
-                <p className="text-sm mt-2">「拠点情報を取得」ボタンを押して、OpenAI APIから情報を取得できます</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* 右側スライドアウトパネル: 企業詳細 */}
       <div className={`fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${
@@ -479,6 +399,73 @@ const CorporationDashboard: React.FC = () => {
                       <span className="block text-xs text-gray-500">登録日</span>
                       <span className="text-sm text-gray-900">{formatDate(selectedCorporation.created_at)}</span>
                     </div>
+                  </div>
+                </div>
+
+                {/* 拠点情報 */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-900">拠点情報</h3>
+                    <button
+                      onClick={handleRefreshBases}
+                      disabled={refreshBasesMutation.isPending}
+                      className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {refreshBasesMutation.isPending ? '取得中...' : '拠点情報を取得'}
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {refreshBasesMutation.isPending ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="mt-2 text-xs text-gray-500">拠点情報を取得中...</p>
+                      </div>
+                    ) : bases && bases.length > 0 ? (
+                      bases.map((base) => (
+                        <div key={base.id} className="border border-gray-200 rounded-lg p-3">
+                          <div className="flex items-start">
+                            <MapPinIcon className="h-4 w-4 text-gray-400 mt-1 mr-2 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-medium text-gray-900">
+                                {base.base_name || '拠点'}
+                              </h4>
+                              <p className="text-xs text-gray-600 mt-1">
+                                {base.location}
+                              </p>
+                              
+                              <div className="mt-2 space-y-1">
+                                {base.phone_number && (
+                                  <div className="flex items-center text-xs text-gray-500">
+                                    <PhoneIcon className="h-3 w-3 mr-1" />
+                                    {base.phone_number}
+                                  </div>
+                                )}
+                                {base.data_source_url && (
+                                  <div className="flex items-center text-xs text-gray-500">
+                                    <GlobeAltIcon className="h-3 w-3 mr-1" />
+                                    <a 
+                                      href={base.data_source_url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-800 truncate"
+                                    >
+                                      情報源
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-gray-500">
+                        <MapPinIcon className="h-8 w-8 mx-auto text-gray-300 mb-2" />
+                        <p className="text-xs">拠点情報が見つかりませんでした</p>
+                        <p className="text-xs mt-1">「拠点情報を取得」ボタンを押してAIから情報を取得できます</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

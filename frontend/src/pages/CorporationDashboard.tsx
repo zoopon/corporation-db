@@ -44,9 +44,8 @@ const CorporationDashboard: React.FC = () => {
   // 選択された企業の詳細情報を取得
   const { data: selectedCorporation, isLoading: corporationDetailsLoading } = useCorporation(selectedCorporateNumber);
   
-  // 選択された企業の拠点情報（企業一覧の情報から取得）
-  const selectedCorp = corporations?.corporations?.find(corp => corp.corporate_number === selectedCorporateNumber);
-  const bases = selectedCorp?.bases || [];
+  // 選択された企業の拠点情報（詳細APIから取得）
+  const bases = selectedCorporation?.bases || [];
   
   // 拠点情報再取得ミューテーション
   const refreshBasesMutation = useRefreshBases();

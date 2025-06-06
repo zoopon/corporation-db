@@ -426,19 +426,51 @@ const CorporationDashboard: React.FC = () => {
                           <div className="flex items-start">
                             <MapPinIcon className="h-4 w-4 text-gray-400 mt-1 mr-2 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-medium text-gray-900">
-                                {base.base_name || '拠点'}
-                              </h4>
-                              <p className="text-xs text-gray-600 mt-1">
-                                {base.location}
-                              </p>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="text-sm font-medium text-gray-900">
+                                  {base.base_name || '拠点'}
+                                </h4>
+                                {base.is_head_office && (
+                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                                    本社
+                                  </span>
+                                )}
+                              </div>
                               
-                              <div className="mt-2 space-y-1">
+                              <div className="space-y-1">
+                                {base.location && (
+                                  <p className="text-xs text-gray-600">
+                                    <span className="font-medium">住所:</span> {base.location}
+                                  </p>
+                                )}
+                                {base.postal_code && (
+                                  <p className="text-xs text-gray-600">
+                                    <span className="font-medium">郵便番号:</span> {base.postal_code}
+                                  </p>
+                                )}
                                 {base.phone_number && (
-                                  <div className="flex items-center text-xs text-gray-500">
+                                  <div className="flex items-center text-xs text-gray-600">
                                     <PhoneIcon className="h-3 w-3 mr-1" />
-                                    {base.phone_number}
+                                    <span className="font-medium">電話:</span> {base.phone_number}
                                   </div>
+                                )}
+                                {base.fax_number && (
+                                  <p className="text-xs text-gray-600">
+                                    <span className="font-medium">FAX:</span> {base.fax_number}
+                                  </p>
+                                )}
+                                {base.country_code && (
+                                  <p className="text-xs text-gray-600">
+                                    <span className="font-medium">国:</span> {base.country_code}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
+                                {base.data_obtained_at && (
+                                  <p className="text-xs text-gray-500">
+                                    <span className="font-medium">取得日時:</span> {formatDate(base.data_obtained_at)}
+                                  </p>
                                 )}
                                 {base.data_source_url && (
                                   <div className="flex items-center text-xs text-gray-500">

@@ -61,7 +61,7 @@ services:
       - ./shared:/app/shared:ro
       - /app/node_modules
     environment:
-      - VITE_API_BASE_URL=http://localhost
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost}
       - VITE_ENV=development
     depends_on:
       - backend

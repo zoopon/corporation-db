@@ -89,3 +89,5 @@ networks:
 
 volumes:
   postgres_data:
+    external: true
+    name: corporatioin-db-postgres-data
